@@ -1,4 +1,3 @@
-// Improved Delivery Chatbot UI Script
 (function () {
   // ───────── CONFIG & STATE ─────────
   const DELIVERY_DATA = [
@@ -9,7 +8,7 @@
   ];
 
   const STEPS = [
-    { id: "topic", text: "Hello! How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups", "Sales"] },
+    { id: "topic", text: "Hello! How may I assist you today? 😊", type: "smartChoice", choices: ["Track Consignment", "Pickups", "Sales"] },
     { id: "role", text: "Are you the Sender or Receiver, please?", type: "choice", choices: ["Sender", "Receiver"], dependsOn: "Track Consignment" },
     { id: "postcode", text: "Please enter the Postcode:", type: "input", dependsOn: "Track Consignment" },
     { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
@@ -43,8 +42,9 @@
     consign: val => /^\d{13}$/.test(val),
   };
 
-  const addMessage = (text, sender = "bot", delay = 800) => {
-    const messageDelay = delay + 400 + Math.random() * 800;
+  // Polite delayed message add
+  function addMessage(text, sender = "bot", baseDelay = 800) {
+    const delay = baseDelay + 400 + Math.random() * 800;
     setTimeout(() => {
       const msg = document.createElement("div");
       msg.className = `msg ${sender}`;
@@ -60,9 +60,10 @@
       msg.append(avatar, bubble);
       STATE.body.appendChild(msg);
       scrollToBottom();
-    }, messageDelay);
-  };
+    }, delay);
+  }
 
+  // Ask user to confirm detected intent
   function confirmIntent(intent) {
     STATE.inputPane.innerHTML = "";
     addMessage(`Please confirm: ${intent}?`, "bot");
@@ -80,10 +81,11 @@
         }
         showStep();
       };
-      STATE.inputPane.append(btn);
+      STATE.inputPane.appendChild(btn);
     });
   }
 
+  // Ask if user wants live agent
   function askLiveAgentConsent() {
     STATE.inputPane.innerHTML = "";
     addMessage("Would you like to talk to a live customer service representative?", "bot");
@@ -95,15 +97,16 @@
         addMessage(label, "user");
         if (label === "Yes") {
           addMessage("Thank you, connecting you now…", "bot");
-          // Here you can trigger live chat integration
+          // TODO: Insert live chat handoff here
         } else {
           addMessage("Alright, how else can I help you?", "bot");
         }
       };
-      STATE.inputPane.append(btn);
+      STATE.inputPane.appendChild(btn);
     });
   }
 
+  // When all questions answered and validated
   function finalizeFlow() {
     if (STATE.answers.topic !== "Track Consignment") {
       return askLiveAgentConsent();
@@ -122,6 +125,7 @@
     addMessage("How may I assist you further?", "bot");
 
     STATE.inputPane.innerHTML = "";
+
     const etaBtn = document.createElement("button");
     etaBtn.className = "chat-btn";
     etaBtn.textContent = "ETA";
@@ -130,9 +134,11 @@
     const txt = document.createElement("input");
     txt.className = "chat-text";
     txt.placeholder = "Type your question…";
+
     const send = document.createElement("button");
     send.className = "chat-btn";
     send.textContent = "Send";
+
     send.onclick = () => {
       const q = txt.value.trim();
       if (!q) return;
@@ -140,14 +146,19 @@
       addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
       txt.value = "";
     };
-    txt.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
+
+    txt.addEventListener("keypress", e => {
+      if (e.key === "Enter") send.click();
+    });
 
     STATE.inputPane.append(etaBtn, txt, send);
     txt.focus();
   }
 
+  // Main function to show each step
   function showStep() {
     if (STATE.idx >= STEPS.length) return finalizeFlow();
+
     const step = STEPS[STATE.idx];
     if (step.dependsOn && STATE.answers.topic !== step.dependsOn) {
       STATE.idx++;
@@ -158,46 +169,49 @@
     STATE.inputPane.innerHTML = "";
 
     if (step.type === "smartChoice") {
-      const container = document.createElement("div");
-      container.className = "choice-container";
-
-      step.choices.forEach(choice => {
+      const cdiv = document.createElement("div");
+      cdiv.className = "choice-container";
+      step.choices.forEach(ch => {
         const btn = document.createElement("button");
         btn.className = "chat-btn";
-        btn.textContent = choice;
+        btn.textContent = ch;
         btn.onclick = () => {
-          STATE.answers[step.id] = choice;
-          addMessage(choice, "user");
+          STATE.answers[step.id] = ch;
+          addMessage(ch, "user");
           STATE.idx++;
           showStep();
         };
-        container.appendChild(btn);
+        cdiv.appendChild(btn);
       });
 
-      const input = document.createElement("input");
-      input.className = "chat-text";
-      input.placeholder = "Or type…";
-      input.addEventListener("keypress", e => {
-        if (e.key === "Enter" && input.value.trim()) {
-          const userText = input.value.trim();
-          addMessage(userText, "user");
-          const detected = matchIntent(userText);
-          if (detected) confirmIntent(detected);
+      const wrap = document.createElement("div");
+      const txt = document.createElement("input");
+      txt.className = "chat-text";
+      txt.placeholder = "Or type…";
+      wrap.appendChild(txt);
+
+      STATE.inputPane.append(cdiv, wrap);
+
+      txt.focus();
+      txt.addEventListener("keypress", e => {
+        if (e.key === "Enter" && txt.value.trim()) {
+          const u = txt.value.trim();
+          addMessage(u, "user");
+          wrap.remove();
+          const intent = matchIntent(u);
+          if (intent) confirmIntent(intent);
           else askLiveAgentConsent();
         }
       });
 
-      STATE.body.append(container, input);
-      input.focus();
-
     } else if (step.type === "choice") {
-      step.choices.forEach(choice => {
+      step.choices.forEach(ch => {
         const btn = document.createElement("button");
         btn.className = "chat-btn";
-        btn.textContent = choice;
+        btn.textContent = ch;
         btn.onclick = () => {
-          STATE.answers[step.id] = choice;
-          addMessage(choice, "user");
+          STATE.answers[step.id] = ch;
+          addMessage(ch, "user");
           STATE.idx++;
           showStep();
         };
@@ -208,23 +222,41 @@
       const input = document.createElement("input");
       input.className = "chat-text";
       input.placeholder = "Enter here…";
+
       input.addEventListener("keypress", e => {
         if (e.key === "Enter" && input.value.trim()) {
           const value = input.value.trim();
-          const validator = validators[step.id];
-          if (validator && !validator(value)) {
+          let valid = true;
+          let errMsg = "";
+
+          if (step.id === "postcode" && !validators.postcode(value)) {
+            valid = false;
+            errMsg = "Postcode must be 4 digits.";
+          }
+          if (step.id === "phone" && !validators.phone(value)) {
+            valid = false;
+            errMsg = "Phone must be 10 digits, start 02/03/04/07/08.";
+          }
+          if (step.id === "consign" && !validators.consign(value)) {
+            valid = false;
+            errMsg = "Consignment number must be 13 digits.";
+          }
+
+          if (!valid) {
             const err = document.createElement("div");
             err.className = "error";
-            err.textContent = `Invalid ${step.id}.`;
+            err.textContent = errMsg;
             STATE.inputPane.appendChild(err);
             return;
           }
+
           STATE.answers[step.id] = value;
           addMessage(value, "user");
           STATE.idx++;
           showStep();
         }
       });
+
       STATE.inputPane.appendChild(input);
       input.focus();
     }
@@ -235,14 +267,40 @@
     STATE.body = document.getElementById("chat-body");
     STATE.inputPane = document.getElementById("chat-input");
 
-    STATE.inputPane.style.position = "fixed";
-    STATE.inputPane.style.bottom = "0";
-    STATE.inputPane.style.left = "0";
-    STATE.inputPane.style.width = "100%";
-    STATE.inputPane.style.backgroundColor = "#fff";
-    STATE.body.style.paddingBottom = STATE.inputPane.offsetHeight + "px";
+    // Clear any fixed positioning styles on input panel, CSS handles layout
+    STATE.inputPane.style.position = "";
+    STATE.inputPane.style.bottom = "";
+    STATE.inputPane.style.left = "";
+    STATE.inputPane.style.width = "";
+    STATE.inputPane.style.backgroundColor = "";
+    STATE.inputPane.style.padding = "12px";
+    STATE.inputPane.style.display = "flex";
+    STATE.inputPane.style.gap = "8px";
+    STATE.inputPane.style.flexShrink = "0";
 
-    addMessage("Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes.", "bot", 0);
+    // Resize chat body to fill space between header and input bar
+    function resizeBody() {
+      const widget = document.getElementById("chat-widget");
+      const header = document.getElementById("chat-header");
+      const input = document.getElementById("chat-input");
+
+      const totalHeight = widget.clientHeight;
+      const headerHeight = header.offsetHeight;
+      const inputHeight = input.offsetHeight;
+      const bodyHeight = totalHeight - headerHeight - inputHeight;
+
+      STATE.body.style.height = bodyHeight + "px";
+      STATE.body.style.overflowY = "auto";
+    }
+
+    resizeBody();
+    window.addEventListener("resize", resizeBody);
+
+    addMessage(
+      "Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes. 🙏",
+      "bot",
+      0
+    );
     setTimeout(showStep, 1000);
   });
 })();
