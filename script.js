@@ -1,103 +1,115 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // ── INLINE CONSIGNMENT DATA ───────────────────────────────────
-  const tableData = [
+document.addEventListener('DOMContentLoaded', function () {
+  const deliveryData = [
     {
-      CONSIGNMENT: '9999912345678',
-      ETA: new Date('2025-06-23'),
-      'RECEIVER NAME': 'Peter Northey',
-      'ADDRESS 1': '2 City Link Drive',
-      'ADDRESS 2': '',
-      SUBURB: 'Cararra',
-      POSTCODE: '4221',
-      'RECEIVER PHONE': '0403642769'
+      "CONSIGNMENT": "9999912345678",
+      "ETA": "23/06/2025",
+      "RECEIVER NAME": "Peter Northey",
+      "ADDRESS 1": "2 City Link Drive",
+      "ADDRESS 2": "",
+      "SUBURB": "Cararra",
+      "POSTCODE": "4221",
+      "RECEIVER PHONE": "0403642769"
     },
     {
-      CONSIGNMENT: '1111198765432',
-      ETA: new Date('2025-06-23'),
-      'RECEIVER NAME': 'Stephen Catania',
-      'ADDRESS 1': 'Rosehill Gardens',
-      'ADDRESS 2': 'James Ruse Drive',
-      SUBURB: 'Rosehill',
-      POSTCODE: '2142',
-      'RECEIVER PHONE': '0297218106'
+      "CONSIGNMENT": "1111198765432",
+      "ETA": "23/06/2025",
+      "RECEIVER NAME": "Stephen Catania",
+      "ADDRESS 1": "Rosehill Gardens",
+      "ADDRESS 2": "James Ruse Drive",
+      "SUBURB": "Rosehill",
+      "POSTCODE": "2142",
+      "RECEIVER PHONE": "0297218106"
     },
     {
-      CONSIGNMENT: '2222212345678',
-      ETA: new Date('2025-06-24'),
-      'RECEIVER NAME': 'Peter Cipolla',
-      'ADDRESS 1': 'Kings Mansion',
-      'ADDRESS 2': '',
-      SUBURB: 'Double Bay',
-      POSTCODE: '2028',
-      'RECEIVER PHONE': '0492847511'
+      "CONSIGNMENT": "2222212345678",
+      "ETA": "24/06/2025",
+      "RECEIVER NAME": "Peter Cipolla",
+      "ADDRESS 1": "Kings Mansion",
+      "ADDRESS 2": "",
+      "SUBURB": "Double Bay",
+      "POSTCODE": "2028",
+      "RECEIVER PHONE": "0492847511"
     },
     {
-      CONSIGNMENT: '6666698765432',
-      ETA: new Date('2025-06-24'),
-      'RECEIVER NAME': 'Austin Smith',
-      'ADDRESS 1': '42 Wallaby Way',
-      'ADDRESS 2': '',
-      SUBURB: 'Sydney',
-      POSTCODE: '2000',
-      'RECEIVER PHONE': '0404498449'
+      "CONSIGNMENT": "6666698765432",
+      "ETA": "24/06/2025",
+      "RECEIVER NAME": "Austin Smith",
+      "ADDRESS 1": "42 Wallaby Way",
+      "ADDRESS 2": "",
+      "SUBURB": "Sydney",
+      "POSTCODE": "2000",
+      "RECEIVER PHONE": "0404498449"
     }
   ];
 
   const steps = [
-    { id: 'topic',   text: 'How can we assist you today?\nPlease click on one of the buttons below, or write a brief sentence.', type: 'smartChoice', choices: ['Track Consignment','Pickups','Sales'] },
-    { id: 'role',    text: 'Are you the Sender or Receiver?', type: 'choice', choices: ['Sender','Receiver'], dependsOn: 'Track Consignment' },
-    { id: 'postcode',text: 'Enter the Postcode:', type: 'input', dependsOn: 'Track Consignment' },
+    {
+      id: 'topic',
+      text: 'How can we assist you today?\nPlease click on one of the buttons below, or write a brief sentence.',
+      type: 'smartChoice',
+      choices: ['Track Consignment', 'Pickups', 'Sales']
+    },
+    { id: 'role', text: 'Are you the Sender or Receiver?', type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Track Consignment' },
+    { id: 'postcode', text: 'Enter the Postcode:', type: 'input', dependsOn: 'Track Consignment' },
     { id: 'consign', text: 'Enter the Consignment Number:', type: 'input', dependsOn: 'Track Consignment' },
-    { id: 'phone',   text: 'Enter your Phone Number:', type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'phone', text: 'Enter your Phone Number:', type: 'input', dependsOn: 'Track Consignment' },
     { id: 'surname', text: 'Enter your Surname:', type: 'input', dependsOn: 'Track Consignment' }
   ];
 
-  const bodyDiv  = document.getElementById('chat-body');
-  const inputDiv = document.getElementById('chat-input');
-  let answers   = {};
+  const answers = {};
   let stepIndex = 0;
+  const body = document.getElementById('chat-body');
+  const input = document.getElementById('chat-input');
 
-  const delay = ms => new Promise(r => setTimeout(r, ms));
-
-  async function addMessage(txt, who) {
-    if (who === 'bot') await delay(600);
-    const d = document.createElement('div');
-    d.className = 'msg ' + who;
-    d.textContent = txt;
-    bodyDiv.appendChild(d);
-    bodyDiv.scrollTop = bodyDiv.scrollHeight;
+  function addMessage(text, who) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    div.textContent = text;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
   }
 
-  function normalize(s) {
-    return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]/gi,'');
+  function normalize(str) {
+    return String(str || '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '');
   }
 
-  function matchIntent(txt) {
-    const t = normalize(txt);
-    if (/(track|where|delivery)/.test(t)) return 'Track Consignment';
-    if (/(pickup|collect)/.test(t)) return 'Pickups';
-    if (/(quote|price|sales)/.test(t)) return 'Sales';
+  function matchIntent(userInput) {
+    const text = normalize(userInput);
+    if (text.includes('track') || text.includes('where') || text.includes('delivery')) return 'Track Consignment';
+    if (text.includes('pickup') || text.includes('collect') || text.includes('pick up')) return 'Pickups';
+    if (text.includes('quote') || text.includes('price') || text.includes('sales')) return 'Sales';
     return null;
   }
 
   function isWeekend() {
-    const d = new Date().getDay();
-    return d===0||d===6;
+    const day = new Date().getDay();
+    return day === 0 || day === 6;
   }
 
   function startLiveChat() {
     if (isWeekend()) {
-      addMessage("Thanks! Our live chat is unavailable on weekends. A team member will be in touch shortly.", 'bot');
+      addMessage("Thanks! Live chat is unavailable on weekends. A team member will reach out soon.", "bot");
       return;
     }
-    addMessage("One moment please — we’re connecting you with a team member…", 'bot');
+
+    addMessage("Connecting you with a team member…", "bot");
     sendEmailNotification(answers);
-    window.open('https://northeyinc.github.io/live-chat/','_blank');
+
+    if (window.Tawk_API && typeof Tawk_API.maximize === "function") {
+      Tawk_API.maximize();
+    } else {
+      addMessage("Live chat widget is loading… please hold.", "bot");
+    }
   }
 
   function sendEmailNotification(data) {
-    const msg = `
+    const body = `
 A customer has been escalated from the DFE Chat Bot.
+
+Their responses:
 
 - Topic: ${data.topic}
 - Postcode: ${data.postcode}
@@ -106,143 +118,164 @@ A customer has been escalated from the DFE Chat Bot.
 - Surname: ${data.surname}
 - Role: ${data.role}
 
-👉 Reply: https://northeyinc.github.io/live-chat/
+👉 Click here to reply with wait time: https://northeyinc.github.io/live-chat/
     `.trim();
 
     fetch('https://formsubmit.co/ajax/YOUR_EMAIL@example.com', {
       method: 'POST',
-      headers: { 'Content-Type':'application/json','Accept':'application/json' },
-      body: JSON.stringify({ subject:"Live Chat Escalation", message: msg })
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        subject: "Live Chat Escalation",
+        message: body
+      })
     });
   }
 
   function fallbackOption() {
     addMessage("Sorry, I didn’t quite catch that. Would you like to speak to someone instead?", 'bot');
-    const b = document.createElement('button');
-    b.className = 'chat-btn';
-    b.textContent = 'Talk to Us';
-    b.onclick = startLiveChat;
-    inputDiv.appendChild(b);
+    const btn = document.createElement('button');
+    btn.className = 'chat-btn';
+    btn.textContent = 'Talk to Us';
+    btn.onclick = startLiveChat;
+    input.appendChild(btn);
   }
 
-  async function showStep() {
-    inputDiv.innerHTML = '';
+  function showStep() {
+    input.innerHTML = '';
 
     if (stepIndex >= steps.length) {
       if (answers.topic !== 'Track Consignment') {
-        await addMessage('Thanks—passing to a team member.', 'bot');
-        return startLiveChat();
+        addMessage("Thanks for letting us know. We’ll pass this to a team member.", "bot");
+        startLiveChat();
+        return;
       }
 
-      const match = tableData.find(r => 
-        normalize(r.POSTCODE)    === normalize(answers.postcode) &&
-        normalize(r.CONSIGNMENT) === normalize(answers.consign) &&
-        normalize(r['RECEIVER PHONE']) === normalize(answers.phone) &&
-        normalize(r['RECEIVER NAME'])  === normalize(answers.surname)
+      const match = deliveryData.find(row =>
+        normalize(row.POSTCODE) === normalize(answers.postcode) &&
+        normalize(row.CONSIGNMENT) === normalize(answers.consign) &&
+        normalize(row["RECEIVER PHONE"]) === normalize(answers.phone) &&
+        normalize(row["RECEIVER NAME"]) === normalize(answers.surname)
       );
 
       if (!match) {
-        await addMessage('❌ Could not verify your details—please double-check.', 'bot');
-        return fallbackOption();
+        addMessage("❌ Thank you. Unfortunately, we couldn’t verify your details. Please double-check.", "bot");
+        fallbackOption();
+        return;
       }
 
-      const eta = match.ETA;
-      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      const eta = new Date(match.ETA.split('/').reverse().join('/'));
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
       if (eta >= tomorrow) {
-        await addMessage('✅ Your delivery is on the way.', 'bot');
-        return addMessage('📦 ETA: ' + eta.toDateString(), 'bot');
+        addMessage("✅ Thank you! Your delivery is on the way.", "bot");
+        addMessage("📦 ETA: " + eta.toDateString(), "bot");
+        return;
       }
 
-      await addMessage('Looks like you’ll need a live agent’s help.', 'bot');
-      return startLiveChat();
+      addMessage("Thanks. It looks like your delivery may require assistance from a live agent.", "bot");
+      startLiveChat();
+      return;
     }
 
     const step = steps[stepIndex];
+
     if (step.dependsOn && answers.topic !== step.dependsOn) {
       stepIndex++;
       return showStep();
     }
 
-    await addMessage(step.text, 'bot');
-
     if (step.type === 'smartChoice') {
+      addMessage(step.text, 'bot');
+
       const txt = document.createElement('input');
       txt.className = 'chat-text';
-      txt.placeholder = 'Type here or click a button…';
-      txt.addEventListener('keypress', e => {
-        if (e.key==='Enter' && txt.value.trim()) {
-          addMessage(txt.value,'user');
-          const guess = matchIntent(txt.value);
-          if (!guess) return fallbackOption();
-          inputDiv.innerHTML = '';
-          addMessage(`Just to confirm: ${guess}?`,'bot');
-          ['Yes','No'].forEach(ans=>{
-            const btn = document.createElement('button');
-            btn.className='chat-btn';
-            btn.textContent=ans;
-            btn.onclick=async()=>{
-              await addMessage(ans,'user');
-              if (ans==='Yes') { answers[step.id]=guess; stepIndex++; }
+      txt.placeholder = "Type here or click a button...";
+      txt.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && txt.value.trim()) {
+          const userText = txt.value.trim();
+          addMessage(userText, 'user');
+
+          const guess = matchIntent(userText);
+          if (guess) {
+            input.innerHTML = '';
+            addMessage(`Just to confirm, are you asking about: ${guess}?`, 'bot');
+
+            const yesBtn = document.createElement('button');
+            yesBtn.className = 'chat-btn';
+            yesBtn.textContent = 'Yes';
+            yesBtn.onclick = () => {
+              answers[step.id] = guess;
+              stepIndex++;
               showStep();
             };
-            inputDiv.appendChild(btn);
-          });
+
+            const noBtn = document.createElement('button');
+            noBtn.className = 'chat-btn';
+            noBtn.textContent = 'No';
+            noBtn.onclick = () => {
+              addMessage("No problem! Please click one of the buttons below or rephrase your question.", 'bot');
+              showStep();
+            };
+
+            input.appendChild(yesBtn);
+            input.appendChild(noBtn);
+          } else {
+            fallbackOption();
+          }
         }
       });
-      inputDiv.appendChild(txt);
+      input.appendChild(txt);
       txt.focus();
 
-      step.choices.forEach(c=>{
+      step.choices.forEach(choice => {
         const btn = document.createElement('button');
-        btn.className='chat-btn';
-        btn.textContent=c;
-        btn.onclick=async()=>{
-          answers[step.id]=c;
-          await addMessage(c,'user');
-          await addMessage(`Thanks, got that: ${c}`,'bot');
+        btn.className = 'chat-btn';
+        btn.textContent = choice;
+        btn.onclick = () => {
+          answers[step.id] = choice;
+          addMessage(choice, 'user');
+          addMessage(`Thanks, got that: ${choice}`, 'bot');
           stepIndex++;
           showStep();
         };
-        inputDiv.appendChild(btn);
+        input.appendChild(btn);
       });
 
     } else if (step.type === 'choice') {
-      step.choices.forEach(c=>{
+      addMessage(step.text, 'bot');
+      step.choices.forEach(choice => {
         const btn = document.createElement('button');
-        btn.className='chat-btn';
-        btn.textContent=c;
-        btn.onclick=async()=>{
-          answers[step.id]=c;
-          await addMessage(c,'user');
-          await addMessage(`Thanks, noted: ${c}`,'bot');
+        btn.className = 'chat-btn';
+        btn.textContent = choice;
+        btn.onclick = () => {
+          answers[step.id] = choice;
+          addMessage(choice, 'user');
+          addMessage(`Thanks, noted: ${choice}`, 'bot');
           stepIndex++;
           showStep();
         };
-        inputDiv.appendChild(btn);
+        input.appendChild(btn);
       });
 
     } else {
+      addMessage(step.text, 'bot');
       const txt = document.createElement('input');
-      txt.className='chat-text';
-      txt.addEventListener('keypress', e => {
-        if (e.key==='Enter' && txt.value.trim()) {
-          answers[step.id]=txt.value.trim();
-          addMessage(txt.value,'user');
-          addMessage('Thanks for that.','bot');
+      txt.className = 'chat-text';
+      txt.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && txt.value.trim()) {
+          answers[step.id] = txt.value.trim();
+          addMessage(txt.value.trim(), 'user');
+          addMessage("Thanks for that.", 'bot');
           stepIndex++;
           showStep();
         }
       });
-      inputDiv.appendChild(txt);
+      input.appendChild(txt);
       txt.focus();
     }
   }
 
-  // Start the conversation
-  addMessage(
-    'Welcome to Direct Freight Express! This chat may be used for accuracy and reporting.',
-    'bot'
-  );
-  setTimeout(showStep, 600);
+  addMessage("Welcome to Direct Freight Express! Please be aware that this chat may be used for accuracy and reporting purposes.", "bot");
+  setTimeout(showStep, 800);
 });
