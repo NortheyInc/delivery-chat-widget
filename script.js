@@ -36,7 +36,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function normalize(str) {
-    return String(str || '').trim().toLowerCase().replace(/\s+/g, '');
+    return String(str || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '');
   }
 
   function matchIntent(userInput) {
@@ -47,14 +51,23 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
+  function isWeekend() {
+    const today = new Date().getDay();
+    return today === 0 || today === 6;
+  }
+
   function startLiveChat() {
+    if (isWeekend()) {
+      addMessage("Thanks! Our live chat is unavailable on weekends. A team member will be in touch shortly.", "bot");
+      return;
+    }
+
     addMessage('One moment please — we’re connecting you with a team member…', 'bot');
     sendEmailNotification(answers);
     window.open('https://northeyinc.github.io/live-chat/', '_blank');
   }
 
   function sendEmailNotification(data) {
-    const subject = encodeURIComponent("DFE Live Chat Escalation");
     const body = `
 A customer has been escalated from the DFE Chat Bot.
 
