@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   let tableData = [];
   fetch('data.xlsx')
     .then(res => res.arrayBuffer())
@@ -31,42 +31,44 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function sendEmailNotification(data) {
-    fetch('https://formsubmit.co/ajax/peterno@directfreight.com.au', {
+    fetch('https://formsubmit.co/ajax/YOUR_EMAIL@example.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
-        message: 'User was not satisfied with chat bot',
+        message: 'User was not satisfied with the chatbot and requested help.',
         ...data
       })
     })
-    .then(response => response.json())
+    .then(res => res.json())
     .then(data => console.log('Email sent:', data))
-    .catch(error => console.error('Email failed:', error));
+    .catch(err => console.error('Email error:', err));
   }
 
   function startLiveChat() {
     addMessage('Connecting you to a live agent…', 'bot');
     sendEmailNotification(answers);
-    window.open('https://your-livechat.example.com', '_blank'); // Replace with real URL
+    window.open('https://your-livechat.example.com', '_blank'); // Replace with real link
   }
 
   function showStep() {
     input.innerHTML = '';
 
     if (stepIndex >= steps.length) {
-      addMessage('Thanks! Finding your delivery status…', 'bot');
-
       const match = tableData.find(row =>
-        String(row.Postcode) === answers.postcode &&
-        String(row.Consignment) === answers.consign
+        String(row.Postcode).trim() === answers.postcode &&
+        String(row.Consignment).trim().toUpperCase() === answers.consign.toUpperCase() &&
+        String(row.Mobile || row.Phone || '').replace(/\s/g, '') === answers.phone.replace(/\s/g, '') &&
+        String(row.Name || row.Surname || '').toLowerCase() === answers.surname.toLowerCase()
       );
 
-      if (match) {
-        addMessage('Status: ' + match.Status, 'bot');
-        addMessage('ETA: ' + match.ETA, 'bot');
-      } else {
-        addMessage('Sorry, we couldn’t find that delivery.', 'bot');
+      if (!match) {
+        addMessage('❌ Sorry, we couldn’t verify your details. Please double-check and try again.', 'bot');
+        return;
       }
+
+      addMessage('✅ Thanks! Your delivery was found.', 'bot');
+      addMessage('Status: ' + (match.Status || 'N/A'), 'bot');
+      addMessage('ETA: ' + (match.ETA || 'N/A'), 'bot');
 
       addMessage('Did this answer help you?', 'bot');
       ['Yes', 'No'].forEach(choice => {
@@ -76,11 +78,26 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.onclick = () => {
           addMessage(choice, 'user');
           if (choice === 'No') {
-            startLiveChat();
+            addMessage('How may I assist you today?', 'bot');
+            const inputBox = document.createElement('input');
+            inputBox.className = 'chat-text';
+            inputBox.placeholder = 'Type your message...';
+            inputBox.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter' && inputBox.value.trim()) {
+                const followUp = inputBox.value.trim();
+                addMessage(followUp, 'user');
+                answers.followup = followUp;
+                input.innerHTML = '';
+                startLiveChat();
+              }
+            });
+            input.innerHTML = '';
+            input.appendChild(inputBox);
+            inputBox.focus();
           } else {
             addMessage('Great—we’re happy to help!', 'bot');
+            input.innerHTML = '';
           }
-          input.innerHTML = '';
         };
         input.appendChild(btn);
       });
@@ -112,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const txt = document.createElement('input');
       txt.className = 'chat-text';
       txt.placeholder = step.placeholder;
-      txt.addEventListener('keypress', function(e) {
+      txt.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && txt.value.trim()) {
           answers[step.id] = txt.value.trim();
           addMessage(txt.value.trim(), 'user');
@@ -125,7 +142,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // 🟠 Show welcome first
   addMessage(
     'Welcome to Direct Freight Express! Please be aware that this chat may be used for accuracy and reporting purposes.',
     'bot'
