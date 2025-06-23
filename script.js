@@ -9,12 +9,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
   const steps = [
-    { id: 'delivery?', text: 'Are you looking for info on a delivery?', type: 'choice', choices: ['Yes', 'No'] },
-    { id: 'role',      text: 'Are you the Receiver or Sender?',         type: 'choice', choices: ['Receiver', 'Sender'], dependsOn: 'Yes' },
-    { id: 'postcode',  text: 'Please enter the Postcode:',                     type: 'input', dependsOn: 'Yes' },
-    { id: 'consign',   text: 'Can I now have the Consignment Number please?:',           type: 'input', dependsOn: 'Yes' },
-    { id: 'phone',     text: 'Enter your contact Phone Number:',                type: 'input', dependsOn: 'Yes' },
-    { id: 'surname',   text: 'Please enter your Surname:',                     type: 'input', dependsOn: 'Yes' }
+    { id: 'topic',     text: 'How can we assist you today? Please click on one of the buttons below, or write a brief sentence.', type: 'choice', choices: ['Track Consignment', 'Pickups', 'Sales'] },
+    { id: 'role',      text: 'Are you the Sender or Receiver?',         type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Track Consignment' },
+    { id: 'postcode',  text: 'Enter the Postcode:',                     type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'consign',   text: 'Enter the Consignment Number:',           type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'phone',     text: 'Enter your Phone Number:',                type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'surname',   text: 'Enter your Surname:',                     type: 'input', dependsOn: 'Track Consignment' }
   ];
 
   let answers = {};
@@ -47,17 +47,17 @@ A customer has been escalated from the DFE Chat Bot.
 
 Their responses:
 
+- Topic: ${data.topic}
 - Postcode: ${data.postcode}
 - Consignment: ${data.consign}
 - Phone: ${data.phone}
 - Surname: ${data.surname}
 - Role: ${data.role}
-- Delivery?: ${data["delivery?"]}
 
 👉 Click here to reply with wait time: https://northeyinc.github.io/live-chat/
     `.trim();
 
-    fetch('https://formsubmit.co/ajax/peterno@directfreight.com.au', {
+    fetch('https://formsubmit.co/ajax/YOUR_EMAIL@example.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
@@ -71,13 +71,18 @@ Their responses:
     input.innerHTML = '';
 
     if (stepIndex >= steps.length) {
-const match = tableData.find(row =>
-  normalize(row['POSTCODE']) === normalize(answers.postcode) &&
-  normalize(row['CONSIGNMENT']) === normalize(answers.consign) &&
-  normalize(row['RECEIVER PHONE']) === normalize(answers.phone) &&
-  normalize(row['RECEIVER NAME']) === normalize(answers.surname)
-);
+      if (answers.topic !== 'Track Consignment') {
+        addMessage('We’ll pass your query to a live agent.', 'bot');
+        startLiveChat();
+        return;
+      }
 
+      const match = tableData.find(row =>
+        normalize(row['POSTCODE']) === normalize(answers.postcode) &&
+        normalize(row['CONSIGNMENT']) === normalize(answers.consign) &&
+        normalize(row['RECEIVER PHONE']) === normalize(answers.phone) &&
+        normalize(row['RECEIVER NAME']) === normalize(answers.surname)
+      );
 
       if (!match) {
         addMessage('❌ Sorry, we couldn’t verify your details. Please double-check.', 'bot');
@@ -100,7 +105,7 @@ const match = tableData.find(row =>
     }
 
     const step = steps[stepIndex];
-    if (step.dependsOn && answers['delivery?'] !== step.dependsOn) {
+    if (step.dependsOn && answers['topic'] !== step.dependsOn) {
       stepIndex++;
       return showStep();
     }
