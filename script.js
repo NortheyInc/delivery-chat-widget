@@ -1,16 +1,59 @@
 document.addEventListener('DOMContentLoaded', () => {
-  let tableData = [];
-  const steps = [
-    { id: 'topic',    text: 'How can we assist you today?\nPlease click one of the buttons below, or write a brief sentence.', type: 'smartChoice', choices: ['Track Consignment','Pickups','Sales'] },
-    { id: 'role',     text: 'Are you the Sender or Receiver?', type: 'choice',         choices: ['Sender','Receiver'], dependsOn: 'Track Consignment' },
-    { id: 'postcode', text: 'Enter the Postcode:',                     type: 'input',          dependsOn: 'Track Consignment' },
-    { id: 'consign',  text: 'Enter the Consignment Number:',           type: 'input',          dependsOn: 'Track Consignment' },
-    { id: 'phone',    text: 'Enter your Phone Number:',                type: 'input',          dependsOn: 'Track Consignment' },
-    { id: 'surname',  text: 'Enter your Surname:',                     type: 'input',          dependsOn: 'Track Consignment' }
+  // ── INLINE CONSIGNMENT DATA ───────────────────────────────────
+  const tableData = [
+    {
+      CONSIGNMENT: '9999912345678',
+      ETA: new Date('2025-06-23'),
+      'RECEIVER NAME': 'Peter Northey',
+      'ADDRESS 1': '2 City Link Drive',
+      'ADDRESS 2': '',
+      SUBURB: 'Cararra',
+      POSTCODE: '4221',
+      'RECEIVER PHONE': '0403642769'
+    },
+    {
+      CONSIGNMENT: '1111198765432',
+      ETA: new Date('2025-06-23'),
+      'RECEIVER NAME': 'Stephen Catania',
+      'ADDRESS 1': 'Rosehill Gardens',
+      'ADDRESS 2': 'James Ruse Drive',
+      SUBURB: 'Rosehill',
+      POSTCODE: '2142',
+      'RECEIVER PHONE': '0297218106'
+    },
+    {
+      CONSIGNMENT: '2222212345678',
+      ETA: new Date('2025-06-24'),
+      'RECEIVER NAME': 'Peter Cipolla',
+      'ADDRESS 1': 'Kings Mansion',
+      'ADDRESS 2': '',
+      SUBURB: 'Double Bay',
+      POSTCODE: '2028',
+      'RECEIVER PHONE': '0492847511'
+    },
+    {
+      CONSIGNMENT: '6666698765432',
+      ETA: new Date('2025-06-24'),
+      'RECEIVER NAME': 'Austin Smith',
+      'ADDRESS 1': '42 Wallaby Way',
+      'ADDRESS 2': '',
+      SUBURB: 'Sydney',
+      POSTCODE: '2000',
+      'RECEIVER PHONE': '0404498449'
+    }
   ];
 
-  const chatBody  = document.getElementById('chat-body');
-  const chatInput = document.getElementById('chat-input');
+  const steps = [
+    { id: 'topic',   text: 'How can we assist you today?\nPlease click on one of the buttons below, or write a brief sentence.', type: 'smartChoice', choices: ['Track Consignment','Pickups','Sales'] },
+    { id: 'role',    text: 'Are you the Sender or Receiver?', type: 'choice', choices: ['Sender','Receiver'], dependsOn: 'Track Consignment' },
+    { id: 'postcode',text: 'Enter the Postcode:', type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'consign', text: 'Enter the Consignment Number:', type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'phone',   text: 'Enter your Phone Number:', type: 'input', dependsOn: 'Track Consignment' },
+    { id: 'surname', text: 'Enter your Surname:', type: 'input', dependsOn: 'Track Consignment' }
+  ];
+
+  const bodyDiv  = document.getElementById('chat-body');
+  const inputDiv = document.getElementById('chat-input');
   let answers   = {};
   let stepIndex = 0;
 
@@ -18,11 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function addMessage(txt, who) {
     if (who === 'bot') await delay(600);
-    const el = document.createElement('div');
-    el.className = `msg ${who}`;
-    el.textContent = txt;
-    chatBody.appendChild(el);
-    chatBody.scrollTop = chatBody.scrollHeight;
+    const d = document.createElement('div');
+    d.className = 'msg ' + who;
+    d.textContent = txt;
+    bodyDiv.appendChild(d);
+    bodyDiv.scrollTop = bodyDiv.scrollHeight;
   }
 
   function normalize(s) {
@@ -32,14 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function matchIntent(txt) {
     const t = normalize(txt);
     if (/(track|where|delivery)/.test(t)) return 'Track Consignment';
-    if (/(pickup|collect)/.test(t))            return 'Pickups';
-    if (/(quote|price|sales)/.test(t))          return 'Sales';
+    if (/(pickup|collect)/.test(t)) return 'Pickups';
+    if (/(quote|price|sales)/.test(t)) return 'Sales';
     return null;
   }
 
   function isWeekend() {
     const d = new Date().getDay();
-    return d === 0 || d === 6;
+    return d===0||d===6;
   }
 
   function startLiveChat() {
@@ -49,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     addMessage("One moment please — we’re connecting you with a team member…", 'bot');
     sendEmailNotification(answers);
-    window.open('https://northeyinc.github.io/live-chat/', '_blank');
+    window.open('https://northeyinc.github.io/live-chat/','_blank');
   }
 
   function sendEmailNotification(data) {
@@ -63,54 +106,50 @@ A customer has been escalated from the DFE Chat Bot.
 - Surname: ${data.surname}
 - Role: ${data.role}
 
-👉 Reply here: https://northeyinc.github.io/live-chat/
+👉 Reply: https://northeyinc.github.io/live-chat/
     `.trim();
 
     fetch('https://formsubmit.co/ajax/YOUR_EMAIL@example.com', {
       method: 'POST',
       headers: { 'Content-Type':'application/json','Accept':'application/json' },
-      body: JSON.stringify({ subject: "Live Chat Escalation", message: msg })
+      body: JSON.stringify({ subject:"Live Chat Escalation", message: msg })
     });
   }
 
   function fallbackOption() {
     addMessage("Sorry, I didn’t quite catch that. Would you like to speak to someone instead?", 'bot');
-    const btn = document.createElement('button');
-    btn.className = 'chat-btn';
-    btn.textContent = 'Talk to Us';
-    btn.onclick = startLiveChat;
-    chatInput.appendChild(btn);
+    const b = document.createElement('button');
+    b.className = 'chat-btn';
+    b.textContent = 'Talk to Us';
+    b.onclick = startLiveChat;
+    inputDiv.appendChild(b);
   }
 
   async function showStep() {
-    chatInput.innerHTML = '';
+    inputDiv.innerHTML = '';
 
-    // Completed all steps?
     if (stepIndex >= steps.length) {
-      // non-track topics → escalate
       if (answers.topic !== 'Track Consignment') {
-        await addMessage('Thanks—passing this to a team member.', 'bot');
+        await addMessage('Thanks—passing to a team member.', 'bot');
         return startLiveChat();
       }
 
-      // lookup in tableData
-      const match = tableData.find(r =>
-        normalize(r.POSTCODE)        === normalize(answers.postcode) &&
-        normalize(r.CONSIGNMENT)     === normalize(answers.consign)  &&
-        normalize(r['RECEIVER PHONE'])=== normalize(answers.phone)    &&
-        normalize(r['RECEIVER NAME'])=== normalize(answers.surname)
+      const match = tableData.find(r => 
+        normalize(r.POSTCODE)    === normalize(answers.postcode) &&
+        normalize(r.CONSIGNMENT) === normalize(answers.consign) &&
+        normalize(r['RECEIVER PHONE']) === normalize(answers.phone) &&
+        normalize(r['RECEIVER NAME'])  === normalize(answers.surname)
       );
 
       if (!match) {
-        await addMessage('❌ Couldn’t verify your details—please double-check.', 'bot');
+        await addMessage('❌ Could not verify your details—please double-check.', 'bot');
         return fallbackOption();
       }
 
-      const eta = match.ETA instanceof Date ? match.ETA : new Date(match.ETA);
-      const tom = new Date();
-      tom.setDate(tom.getDate() + 1);
+      const eta = match.ETA;
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 
-      if (eta >= tom) {
+      if (eta >= tomorrow) {
         await addMessage('✅ Your delivery is on the way.', 'bot');
         return addMessage('📦 ETA: ' + eta.toDateString(), 'bot');
       }
@@ -119,7 +158,6 @@ A customer has been escalated from the DFE Chat Bot.
       return startLiveChat();
     }
 
-    // ask next question
     const step = steps[stepIndex];
     if (step.dependsOn && answers.topic !== step.dependsOn) {
       stepIndex++;
@@ -129,101 +167,82 @@ A customer has been escalated from the DFE Chat Bot.
     await addMessage(step.text, 'bot');
 
     if (step.type === 'smartChoice') {
-      // input + buttons
       const txt = document.createElement('input');
       txt.className = 'chat-text';
       txt.placeholder = 'Type here or click a button…';
       txt.addEventListener('keypress', e => {
-        if (e.key === 'Enter' && txt.value.trim()) {
-          addMessage(txt.value, 'user');
-          const g = matchIntent(txt.value);
-          if (!g) return fallbackOption();
-          chatInput.innerHTML = '';
-          addMessage(`Just to confirm: ${g}?`, 'bot');
-          ['Yes','No'].forEach(ans => {
-            const b = document.createElement('button');
-            b.className = 'chat-btn';
-            b.textContent = ans;
-            b.onclick = async () => {
-              await addMessage(ans, 'user');
-              if (ans === 'Yes') {
-                answers[step.id] = g;
-                stepIndex++;
-              }
+        if (e.key==='Enter' && txt.value.trim()) {
+          addMessage(txt.value,'user');
+          const guess = matchIntent(txt.value);
+          if (!guess) return fallbackOption();
+          inputDiv.innerHTML = '';
+          addMessage(`Just to confirm: ${guess}?`,'bot');
+          ['Yes','No'].forEach(ans=>{
+            const btn = document.createElement('button');
+            btn.className='chat-btn';
+            btn.textContent=ans;
+            btn.onclick=async()=>{
+              await addMessage(ans,'user');
+              if (ans==='Yes') { answers[step.id]=guess; stepIndex++; }
               showStep();
             };
-            chatInput.appendChild(b);
+            inputDiv.appendChild(btn);
           });
         }
       });
-      chatInput.appendChild(txt);
+      inputDiv.appendChild(txt);
       txt.focus();
 
-      step.choices.forEach(c => {
-        const b = document.createElement('button');
-        b.className = 'chat-btn';
-        b.textContent = c;
-        b.onclick = async () => {
-          answers[step.id] = c;
-          await addMessage(c, 'user');
-          await addMessage(`Thanks, got that: ${c}`, 'bot');
+      step.choices.forEach(c=>{
+        const btn = document.createElement('button');
+        btn.className='chat-btn';
+        btn.textContent=c;
+        btn.onclick=async()=>{
+          answers[step.id]=c;
+          await addMessage(c,'user');
+          await addMessage(`Thanks, got that: ${c}`,'bot');
           stepIndex++;
           showStep();
         };
-        chatInput.appendChild(b);
+        inputDiv.appendChild(btn);
       });
 
     } else if (step.type === 'choice') {
-      // just buttons
-      step.choices.forEach(c => {
-        const b = document.createElement('button');
-        b.className = 'chat-btn';
-        b.textContent = c;
-        b.onclick = async () => {
-          answers[step.id] = c;
-          await addMessage(c, 'user');
-          await addMessage(`Thanks, noted: ${c}`, 'bot');
+      step.choices.forEach(c=>{
+        const btn = document.createElement('button');
+        btn.className='chat-btn';
+        btn.textContent=c;
+        btn.onclick=async()=>{
+          answers[step.id]=c;
+          await addMessage(c,'user');
+          await addMessage(`Thanks, noted: ${c}`,'bot');
           stepIndex++;
           showStep();
         };
-        chatInput.appendChild(b);
+        inputDiv.appendChild(btn);
       });
 
     } else {
-      // plain text input
       const txt = document.createElement('input');
-      txt.className = 'chat-text';
+      txt.className='chat-text';
       txt.addEventListener('keypress', e => {
-        if (e.key === 'Enter' && txt.value.trim()) {
-          answers[step.id] = txt.value.trim();
-          addMessage(txt.value, 'user');
-          addMessage('Thanks for that.', 'bot');
+        if (e.key==='Enter' && txt.value.trim()) {
+          answers[step.id]=txt.value.trim();
+          addMessage(txt.value,'user');
+          addMessage('Thanks for that.','bot');
           stepIndex++;
           showStep();
         }
       });
-      chatInput.appendChild(txt);
+      inputDiv.appendChild(txt);
       txt.focus();
     }
   }
 
-  // ── load Excel then start the chat ────────────────────────────
-  fetch('data.xlsx')
-    .then(r => r.arrayBuffer())
-    .then(buf => {
-      const wb    = XLSX.read(buf, { type: 'array', cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      tableData   = XLSX.utils.sheet_to_json(sheet);
-    })
-    .catch(err => {
-      console.error('Excel load error:', err);
-      addMessage('⚠️ Couldn’t load consignment data—live chat only.', 'bot');
-    })
-    .finally(() => {
-      addMessage(
-        'Welcome to Direct Freight Express! This chat may be used for accuracy and reporting purposes.',
-        'bot'
-      );
-      setTimeout(showStep, 600);
-    });
+  // Start the conversation
+  addMessage(
+    'Welcome to Direct Freight Express! This chat may be used for accuracy and reporting.',
+    'bot'
+  );
+  setTimeout(showStep, 600);
 });
