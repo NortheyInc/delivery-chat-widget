@@ -10,11 +10,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const steps = [
     { id: 'delivery?', text: 'Are you looking for info on a delivery?', type: 'choice', choices: ['Yes', 'No'] },
-    { id: 'role',      text: 'Are you the Sender or Receiver?',         type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Yes' },
-    { id: 'postcode',  text: 'Enter the Postcode:',                     type: 'input', dependsOn: 'Yes' },
-    { id: 'consign',   text: 'Enter the Consignment Number:',           type: 'input', dependsOn: 'Yes' },
-    { id: 'phone',     text: 'Enter your Phone Number:',                type: 'input', dependsOn: 'Yes' },
-    { id: 'surname',   text: 'Enter your Surname:',                     type: 'input', dependsOn: 'Yes' }
+    { id: 'role',      text: 'Are you the Receiver or Sender?',         type: 'choice', choices: ['Receiver', 'Sender'], dependsOn: 'Yes' },
+    { id: 'postcode',  text: 'Please enter the Postcode:',                     type: 'input', dependsOn: 'Yes' },
+    { id: 'consign',   text: 'Can I now have the Consignment Number please?:',           type: 'input', dependsOn: 'Yes' },
+    { id: 'phone',     text: 'Enter your contact Phone Number:',                type: 'input', dependsOn: 'Yes' },
+    { id: 'surname',   text: 'Please enter your Surname:',                     type: 'input', dependsOn: 'Yes' }
   ];
 
   let answers = {};
