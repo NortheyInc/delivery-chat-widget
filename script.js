@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // 1) Inline delivery data
   const deliveryData = [
     {
       "CONSIGNMENT":   "9999912345678",
@@ -43,14 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   ];
 
-  // 2) Chat steps
   const steps = [
     { id: 'topic',    text: 'How can we assist you today?\nPlease click one of the buttons below or type a brief sentence.', type: 'smartChoice', choices: ['Track Consignment','Pickups','Sales'] },
     { id: 'role',     text: 'Are you the Sender or Receiver?',                                              type: 'choice',      choices: ['Sender','Receiver'], dependsOn: 'Track Consignment' },
     { id: 'postcode', text: 'Enter the Postcode:',                                                            type: 'input',       dependsOn: 'Track Consignment' },
     { id: 'consign',  text: 'Enter the Consignment Number:',                                                  type: 'input',       dependsOn: 'Track Consignment' },
     { id: 'phone',    text: 'Enter your Phone Number:',                                                       type: 'input',       dependsOn: 'Track Consignment' },
-    { id: 'surname',  text: 'Enter your Surname:',                                                            type: 'input',       dependsOn: 'Track Consignment' },
+    { id: 'surname',  text: 'Enter your Surname:',                                                            type: 'input',       dependsOn: 'Track Consignment' }
   ];
 
   const answers = {};
@@ -118,8 +116,6 @@ Click to join: https://${location.host}/support.html?session=${session}
       `<a href="support.html?session=${session}" target="_blank">Click here to join live chat</a>`,
       'bot'
     );
-
-    // switch to free-chat mode
     input.innerHTML = '';
     const txt = document.createElement('input');
     txt.className = 'chat-text';
@@ -164,20 +160,6 @@ Click to join: https://${location.host}/support.html?session=${session}
         return startHandoff();
       }
 
-      // DEBUG logs
-      console.log('User answers:', {
-        postcode: answers.postcode,
-        consign:  answers.consign,
-        phone:    answers.phone,
-        surname:  answers.surname
-      });
-      console.log('Data candidates:', deliveryData.map(r => ({
-        postcode: normalize(r.POSTCODE),
-        consign:  normalize(r.CONSIGNMENT),
-        phone:    normalize(r['RECEIVER PHONE']),
-        surname:  normalize(r['RECEIVER NAME'])
-      })));
-
       const match = deliveryData.find(r =>
         normalize(r.POSTCODE) === normalize(answers.postcode) &&
         normalize(r.CONSIGNMENT) === normalize(answers.consign) &&
@@ -213,7 +195,6 @@ Click to join: https://${location.host}/support.html?session=${session}
     addMessage(step.text, 'bot');
 
     if (step.type === 'smartChoice') {
-      // inline choice container
       const container = document.createElement('div');
       container.className = 'choice-container';
       step.choices.forEach(choice => {
@@ -230,7 +211,6 @@ Click to join: https://${location.host}/support.html?session=${session}
       });
       body.appendChild(container);
 
-      // inline free-text under the buttons
       const wrap = document.createElement('div');
       const txt = document.createElement('input');
       txt.className = 'chat-text';
@@ -296,7 +276,6 @@ Click to join: https://${location.host}/support.html?session=${session}
     }
   }
 
-  // kick off
   addMessage("Welcome to Direct Freight Express!\nThis chat is monitored for accuracy & reporting purposes.", "bot");
   setTimeout(showStep, 800);
 });
