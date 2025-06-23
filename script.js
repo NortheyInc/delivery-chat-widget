@@ -9,12 +9,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
   const steps = [
-    { id: 'delivery?', text: 'Are you looking for assistance with a delivery?', type: 'choice', choices: ['Yes', 'No'] },
+    { id: 'delivery?', text: 'Are you looking for info on a delivery?', type: 'choice', choices: ['Yes', 'No'] },
     { id: 'role',      text: 'Are you the Sender or Receiver?',         type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Yes' },
-    { id: 'postcode',  text: 'Enter the Postcode:',                     type: 'input',  placeholder: '2000', dependsOn: 'Yes' },
-    { id: 'consign',   text: 'Enter the Consignment Number:',           type: 'input',  placeholder: 'ABC123', dependsOn: 'Yes' },
-    { id: 'phone',     text: 'Enter your Phone Number:',                type: 'input',  placeholder: '0412345678', dependsOn: 'Yes' },
-    { id: 'surname',   text: 'Enter your Surname:',                     type: 'input',  placeholder: 'Smith', dependsOn: 'Yes' }
+    { id: 'postcode',  text: 'Enter the Postcode:',                     type: 'input', dependsOn: 'Yes' },
+    { id: 'consign',   text: 'Enter the Consignment Number:',           type: 'input', dependsOn: 'Yes' },
+    { id: 'phone',     text: 'Enter your Phone Number:',                type: 'input', dependsOn: 'Yes' },
+    { id: 'surname',   text: 'Enter your Surname:',                     type: 'input', dependsOn: 'Yes' }
   ];
 
   let answers = {};
@@ -30,24 +30,41 @@ document.addEventListener('DOMContentLoaded', function () {
     body.scrollTop = body.scrollHeight;
   }
 
-  function sendEmailNotification(data) {
-    fetch('https://formsubmit.co/ajax/YOUR_EMAIL@example.com', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        message: 'User was not satisfied with the chatbot and requested help.',
-        ...data
-      })
-    })
-    .then(res => res.json())
-    .then(data => console.log('Email sent:', data))
-    .catch(err => console.error('Email error:', err));
+  function normalize(str) {
+    return String(str || '').trim().toLowerCase().replace(/\s+/g, '');
   }
 
   function startLiveChat() {
     addMessage('Connecting you to a live agent…', 'bot');
     sendEmailNotification(answers);
-    window.open('https://your-livechat.example.com', '_blank'); // Replace with real link
+    window.open('https://northeyinc.github.io/live-chat/', '_blank');
+  }
+
+  function sendEmailNotification(data) {
+    const subject = encodeURIComponent("DFE Live Chat Escalation");
+    const body = `
+A customer has been escalated from the DFE Chat Bot.
+
+Their responses:
+
+- Postcode: ${data.postcode}
+- Consignment: ${data.consign}
+- Phone: ${data.phone}
+- Surname: ${data.surname}
+- Role: ${data.role}
+- Delivery?: ${data["delivery?"]}
+
+👉 Click here to reply with wait time: https://northeyinc.github.io/live-chat/
+    `.trim();
+
+    fetch('https://formsubmit.co/ajax/peterno@directfreight.com.au', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        subject: "Live Chat Escalation",
+        message: body
+      })
+    });
   }
 
   function showStep() {
@@ -55,52 +72,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (stepIndex >= steps.length) {
       const match = tableData.find(row =>
-        String(row.Postcode).trim() === answers.postcode &&
-        String(row.Consignment).trim().toUpperCase() === answers.consign.toUpperCase() &&
-        String(row.Mobile || row.Phone || '').replace(/\s/g, '') === answers.phone.replace(/\s/g, '') &&
-        String(row.Name || row.Surname || '').toLowerCase() === answers.surname.toLowerCase()
+        normalize(row.Postcode) === normalize(answers.postcode) &&
+        normalize(row.Consignment) === normalize(answers.consign) &&
+        normalize(row.Mobile || row.Phone) === normalize(answers.phone) &&
+        normalize(row.Name || row.Surname) === normalize(answers.surname)
       );
 
       if (!match) {
-        addMessage('❌ Sorry, we couldn’t verify your details. Please double-check and try again.', 'bot');
+        addMessage('❌ Sorry, we couldn’t verify your details. Please double-check.', 'bot');
         return;
       }
 
-      addMessage('✅ Thanks! Your delivery was found.', 'bot');
-      addMessage('Status: ' + (match.Status || 'N/A'), 'bot');
-      addMessage('ETA: ' + (match.ETA || 'N/A'), 'bot');
+      const eta = new Date(match.ETA);
+      const todayPlus1 = new Date();
+      todayPlus1.setDate(todayPlus1.getDate() + 1);
 
-      addMessage('Did this answer help you?', 'bot');
-      ['Yes', 'No'].forEach(choice => {
-        const btn = document.createElement('button');
-        btn.className = 'chat-btn';
-        btn.textContent = choice;
-        btn.onclick = () => {
-          addMessage(choice, 'user');
-          if (choice === 'No') {
-            addMessage('How may I assist you today?', 'bot');
-            const inputBox = document.createElement('input');
-            inputBox.className = 'chat-text';
-            inputBox.placeholder = 'Type your message...';
-            inputBox.addEventListener('keypress', function(e) {
-              if (e.key === 'Enter' && inputBox.value.trim()) {
-                const followUp = inputBox.value.trim();
-                addMessage(followUp, 'user');
-                answers.followup = followUp;
-                input.innerHTML = '';
-                startLiveChat();
-              }
-            });
-            input.innerHTML = '';
-            input.appendChild(inputBox);
-            inputBox.focus();
-          } else {
-            addMessage('Great—we’re happy to help!', 'bot');
-            input.innerHTML = '';
-          }
-        };
-        input.appendChild(btn);
-      });
+      if (eta >= todayPlus1) {
+        addMessage('✅ Thanks! Your delivery is on the way.', 'bot');
+        addMessage('ETA: ' + eta.toDateString(), 'bot');
+        return;
+      }
+
+      addMessage('Your delivery may require assistance from a live agent.', 'bot');
+      startLiveChat();
       return;
     }
 
@@ -128,7 +122,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       const txt = document.createElement('input');
       txt.className = 'chat-text';
-      txt.placeholder = step.placeholder;
       txt.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && txt.value.trim()) {
           answers[step.id] = txt.value.trim();
@@ -146,5 +139,5 @@ document.addEventListener('DOMContentLoaded', function () {
     'Welcome to Direct Freight Express! Please be aware that this chat may be used for accuracy and reporting purposes.',
     'bot'
   );
-  setTimeout(showStep, 1000);
+  setTimeout(showStep, 800);
 });
