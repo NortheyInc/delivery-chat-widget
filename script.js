@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function startLiveChat() {
-    addMessage('Connecting you to a live agent…', 'bot');
+    addMessage('One moment please — we’re connecting you with a team member…', 'bot');
     sendEmailNotification(answers);
     window.open('https://northeyinc.github.io/live-chat/', '_blank');
   }
@@ -80,12 +80,23 @@ Their responses:
     });
   }
 
+  function fallbackOption() {
+    addMessage("Sorry, I didn’t quite catch that. Would you like to speak to someone instead?", 'bot');
+    const btn = document.createElement('button');
+    btn.className = 'chat-btn';
+    btn.textContent = 'Talk to Us';
+    btn.onclick = () => {
+      startLiveChat();
+    };
+    input.appendChild(btn);
+  }
+
   function showStep() {
     input.innerHTML = '';
 
     if (stepIndex >= steps.length) {
       if (answers.topic !== 'Track Consignment') {
-        addMessage('We’ll pass your query to a live agent.', 'bot');
+        addMessage('Thanks for letting us know. We’ll pass this to a team member.', 'bot');
         startLiveChat();
         return;
       }
@@ -98,7 +109,8 @@ Their responses:
       );
 
       if (!match) {
-        addMessage('❌ Sorry, we couldn’t verify your details. Please double-check.', 'bot');
+        addMessage('❌ Thank you. Unfortunately, we couldn’t verify your details. Please double-check.', 'bot');
+        fallbackOption();
         return;
       }
 
@@ -107,12 +119,12 @@ Their responses:
       todayPlus1.setDate(todayPlus1.getDate() + 1);
 
       if (eta >= todayPlus1) {
-        addMessage('✅ Thanks! Your delivery is on the way.', 'bot');
-        addMessage('ETA: ' + eta.toDateString(), 'bot');
+        addMessage('✅ Thank you! Your delivery is on the way.', 'bot');
+        addMessage('📦 ETA: ' + eta.toDateString(), 'bot');
         return;
       }
 
-      addMessage('Your delivery may require assistance from a live agent.', 'bot');
+      addMessage('Thanks. It looks like your delivery may require assistance from a live agent.', 'bot');
       startLiveChat();
       return;
     }
@@ -133,6 +145,7 @@ Their responses:
         btn.textContent = choice;
         btn.onclick = () => {
           answers[step.id] = choice;
+          addMessage(`Thanks, noted: ${choice}`, 'bot');
           addMessage(choice, 'user');
           stepIndex++;
           showStep();
@@ -148,11 +161,12 @@ Their responses:
           const guess = matchIntent(txt.value);
           if (guess) {
             answers[step.id] = guess;
+            addMessage(`Thanks, got that: ${guess}`, 'bot');
             addMessage(txt.value, 'user');
             stepIndex++;
             showStep();
           } else {
-            addMessage("Sorry, I didn't understand that. Can you please rephrase?", 'bot');
+            fallbackOption();
           }
         }
       });
@@ -165,6 +179,7 @@ Their responses:
         btn.textContent = choice;
         btn.onclick = () => {
           answers[step.id] = choice;
+          addMessage(`Thanks, got that: ${choice}`, 'bot');
           addMessage(choice, 'user');
           stepIndex++;
           showStep();
@@ -177,6 +192,7 @@ Their responses:
       txt.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && txt.value.trim()) {
           answers[step.id] = txt.value.trim();
+          addMessage(`Thanks for that.`, 'bot');
           addMessage(txt.value.trim(), 'user');
           stepIndex++;
           showStep();
