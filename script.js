@@ -14,14 +14,14 @@
     { id:'phone',    text:'Please enter your Phone Number:',      type:'input',       dependsOn:'Track Consignment' },
     { id:'surname',  text:'Please enter your Surname:',           type:'input',       dependsOn:'Track Consignment' }
   ];
-  const STATE = { answers: {}, idx: 0, channel: null, body: null, inputPane: null };
+  const STATE = { answers:{}, idx:0, channel:null, body:null, inputPane:null };
 
   // —──────── UTILITIES ─────────—
-  function scrollToBottom() {
+  function scrollToBottom(){
     STATE.body.scrollTop = STATE.body.scrollHeight;
   }
   function normalize(s){ return String(s||'').toLowerCase().trim().replace(/\s+/g,''); }
-  function matchIntent(t) {
+  function matchIntent(t){
     const u = normalize(t);
     if(/track|delivery|where/.test(u)) return 'Track Consignment';
     if(/pickup|collect/.test(u))          return 'Pickups';
@@ -32,8 +32,9 @@
   function makeId(){ return Math.random().toString(36).slice(2,10); }
 
   // —──────── MESSAGE RENDERER ─────────—
-  function addMessage(txt, who='bot', delay=600) {
-    setTimeout(() => {
+  function addMessage(txt, who='bot', baseDelay=800){
+    const humanDelay = baseDelay + 400 + Math.random()*800;
+    setTimeout(()=>{
       const m = document.createElement('div');
       m.className = `msg ${who}`;
       m.setAttribute('role','article');
@@ -43,14 +44,10 @@
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
       bubble.innerHTML = txt.replace(/\n/g,'<br>');
-      const ts = document.createElement('time');
-      ts.className = 'ts';
-      ts.dateTime = new Date().toISOString();
-      ts.textContent = new Date().toLocaleTimeString();
-      m.append(avatar, bubble, ts);
+      m.append(avatar, bubble);
       STATE.body.appendChild(m);
       scrollToBottom();
-    }, delay);
+    }, humanDelay);
   }
 
   // —──────── VALIDATORS ─────────—
@@ -59,109 +56,102 @@
   function validateConsignment(s){ return /^\d{13}$/.test(s); }
 
   // —──────── RENDER HELPERS ─────────—
-  function renderSmartChoice(step) {
-    addMessage(step.text, 'bot');
-    STATE.inputPane.innerHTML = '';
+  function renderSmartChoice(step){
+    addMessage(step.text,'bot');
+    STATE.inputPane.innerHTML='';
     const cdiv = document.createElement('div');
-    cdiv.className = 'choice-container';
-    step.choices.forEach(ch => {
+    cdiv.className='choice-container';
+    step.choices.forEach(ch=>{
       const btn = document.createElement('button');
-      btn.className = 'chat-btn'; btn.textContent = ch;
-      btn.onclick = () => {
-        STATE.answers[step.id] = ch;
-        addMessage(ch, 'user');
+      btn.className='chat-btn'; btn.textContent=ch;
+      btn.onclick=()=>{
+        STATE.answers[step.id]=ch;
+        addMessage(ch,'user');
         STATE.idx++; showStep();
       };
       cdiv.append(btn);
     });
     const wrap = document.createElement('div');
     const txt = document.createElement('input');
-    txt.className = 'chat-text'; txt.placeholder = 'Or type…';
+    txt.className='chat-text'; txt.placeholder='Or type…';
     wrap.append(txt);
     STATE.body.append(cdiv, wrap);
     txt.focus();
-    txt.addEventListener('keypress', e => {
-      if(e.key==='Enter' && txt.value.trim()) {
-        const u = txt.value.trim();
+    txt.addEventListener('keypress',e=>{
+      if(e.key==='Enter'&&txt.value.trim()){
+        const u=txt.value.trim();
         addMessage(u,'user');
         wrap.remove();
-        const intent = matchIntent(u);
+        const intent=matchIntent(u);
         if(intent) confirmIntent(intent);
         else askLiveAgentConsent();
       }
     });
   }
 
-  function renderChoice(step) {
-    addMessage(step.text, 'bot');
-    STATE.inputPane.innerHTML = '';
-    step.choices.forEach(ch => {
-      const btn = document.createElement('button');
-      btn.className = 'chat-btn'; btn.textContent = ch;
-      btn.onclick = () => {
-        STATE.answers[step.id] = ch;
-        addMessage(ch, 'user');
+  function renderChoice(step){
+    addMessage(step.text,'bot');
+    STATE.inputPane.innerHTML='';
+    step.choices.forEach(ch=>{
+      const btn=document.createElement('button');
+      btn.className='chat-btn'; btn.textContent=ch;
+      btn.onclick=()=>{
+        STATE.answers[step.id]=ch;
+        addMessage(ch,'user');
         STATE.idx++; showStep();
       };
       STATE.inputPane.append(btn);
     });
   }
 
-  function renderInput(step) {
-    addMessage(step.text, 'bot');
-    STATE.inputPane.innerHTML = '';
-    const txt = document.createElement('input');
-    txt.className = 'chat-text';
-    STATE.inputPane.append(txt);
+  function renderInput(step){
+    addMessage(step.text,'bot');
+    STATE.inputPane.innerHTML='';
+    const txt=document.createElement('input');
+    txt.className='chat-text'; STATE.inputPane.append(txt);
     txt.focus();
-    txt.addEventListener('keypress', e => {
-      if(e.key==='Enter' && txt.value.trim()) {
-        const v = txt.value.trim();
-        // format validation
-        let valid = true, errMsg = '';
-        if(step.id==='postcode' && !validatePostcode(v)) {
-          valid=false; errMsg='Postcode must be 4 digits.';
+    txt.addEventListener('keypress',e=>{
+      if(e.key==='Enter'&&txt.value.trim()){
+        const v=txt.value.trim();
+        let valid=true,err='';
+        if(step.id==='postcode'&&!validatePostcode(v)){
+          valid=false; err='Postcode must be 4 digits.';
         }
-        if(step.id==='phone' && !validatePhone(v)) {
-          valid=false; errMsg='Phone must be 10 digits, start 02/03/04/07/08.';
+        if(step.id==='phone'&&!validatePhone(v)){
+          valid=false; err='Phone must be 10 digits, start 02/03/04/07/08.';
         }
-        if(step.id==='consign' && !validateConsignment(v)) {
-          valid=false; errMsg='Consignment no. must be 13 digits.';
+        if(step.id==='consign'&&!validateConsignment(v)){
+          valid=false; err='Consignment no. must be 13 digits.';
         }
-        if(!valid) {
-          const err = document.createElement('div');
-          err.className = 'error'; err.textContent = errMsg;
-          STATE.inputPane.append(err);
+        if(!valid){
+          const eDiv=document.createElement('div');
+          eDiv.className='error'; eDiv.textContent=err;
+          STATE.inputPane.append(eDiv);
           return;
         }
-        // user answer
-        STATE.answers[step.id] = v;
+        STATE.answers[step.id]=v;
         addMessage(v,'user');
-
-        // if this is the consignment step, check existence immediately
-        if(step.id==='consign') {
-          const rec = DELIVERY_DATA.find(r => normalize(r.CONSIGNMENT)===normalize(v));
-          if(!rec) {
-            return askLiveAgentConsent(); // skip phone/surname, jump to "I can't find you"
+        if(step.id==='consign'){
+          const rec=DELIVERY_DATA.find(r=>normalize(r.CONSIGNMENT)===normalize(v));
+          if(!rec){
+            return askLiveAgentConsent();
           }
         }
-
-        STATE.idx++;
-        showStep();
+        STATE.idx++; showStep();
       }
     });
   }
 
-  function confirmIntent(intent) {
-    STATE.inputPane.innerHTML = '';
-    addMessage(`Please confirm: ${intent}?`, 'bot');
-    ['Yes','No'].forEach(lbl => {
-      const b = document.createElement('button');
-      b.className = 'chat-btn'; b.textContent = lbl;
-      b.onclick = () => {
+  function confirmIntent(intent){
+    STATE.inputPane.innerHTML='';
+    addMessage(`Please confirm: ${intent}?`,'bot');
+    ['Yes','No'].forEach(lbl=>{
+      const b=document.createElement('button');
+      b.className='chat-btn'; b.textContent=lbl;
+      b.onclick=()=>{
         addMessage(lbl,'user');
-        if(lbl==='Yes') {
-          STATE.answers.topic = intent;
+        if(lbl==='Yes'){
+          STATE.answers.topic=intent;
           STATE.idx++;
         } else {
           addMessage("Alright, please choose again or rephrase. 😊",'bot');
@@ -173,24 +163,24 @@
   }
 
   // —──────── POST-MATCH OPTIONS ─────────—
-  function renderPostMatchOptions(match) {
-    STATE.inputPane.innerHTML = '';
-    const etaBtn = document.createElement('button');
-    etaBtn.className = 'chat-btn'; etaBtn.textContent = 'ETA';
-    etaBtn.onclick = () => addMessage(`Your ETA is ${match.ETA}.`, 'bot');
+  function renderPostMatchOptions(match){
+    STATE.inputPane.innerHTML='';
+    const etaBtn=document.createElement('button');
+    etaBtn.className='chat-btn'; etaBtn.textContent='ETA';
+    etaBtn.onclick=()=>addMessage(`Your ETA is ${match.ETA}.`,'bot');
 
-    const txt = document.createElement('input');
-    txt.className = 'chat-text'; txt.placeholder = 'Type your question…';
-    const send = document.createElement('button');
-    send.className = 'chat-btn'; send.textContent = 'Send';
-    send.onclick = () => {
-      const q = txt.value.trim();
+    const txt=document.createElement('input');
+    txt.className='chat-text'; txt.placeholder='Type your question…';
+    const send=document.createElement('button');
+    send.className='chat-btn'; send.textContent='Send';
+    send.onclick=()=>{
+      const q=txt.value.trim();
       if(!q) return;
       addMessage(q,'user');
-      addMessage("Thanks for your question! We'll get back to you shortly.", 'bot');
-      txt.value = '';
+      addMessage("Thanks for your question! We'll get back to you shortly.",'bot');
+      txt.value='';
     };
-    txt.addEventListener('keypress', e => { if(e.key==='Enter') send.click(); });
+    txt.addEventListener('keypress',e=>{ if(e.key==='Enter')send.click(); });
 
     STATE.inputPane.append(etaBtn, txt, send);
     txt.focus();
@@ -198,34 +188,33 @@
 
   // —──────── FINALIZATION & HANDOFF ─────────—
   function finalizeFlow(){
-    if(STATE.answers.topic !== 'Track Consignment') {
-      addMessage("Certainly, connecting you now…", 'bot');
+    if(STATE.answers.topic!=='Track Consignment'){
+      addMessage("Certainly, connecting you now…",'bot');
       return askLiveAgentConsent();
     }
-    const m = DELIVERY_DATA.find(r =>
-      normalize(r.POSTCODE) === normalize(STATE.answers.postcode) &&
-      normalize(r.CONSIGNMENT) === normalize(STATE.answers.consign) &&
-      normalize(r['RECEIVER PHONE']) === normalize(STATE.answers.phone) &&
-      normalize(r['RECEIVER NAME']) === normalize(STATE.answers.surname)
+    const m=DELIVERY_DATA.find(r=>
+      normalize(r.POSTCODE)===normalize(STATE.answers.postcode)&&
+      normalize(r.CONSIGNMENT)===normalize(STATE.answers.consign)&&
+      normalize(r['RECEIVER PHONE'])===normalize(STATE.answers.phone)&&
+      normalize(r['RECEIVER NAME'])===normalize(STATE.answers.surname)
     );
     if(!m) return askLiveAgentConsent();
-    addMessage("Thank you. We have matched your information.", 'bot');
-    addMessage("How may I assist you further?", 'bot');
+    addMessage("Thank you. We have matched your information.",'bot');
+    addMessage("How may I assist you further?",'bot');
     renderPostMatchOptions(m);
   }
 
-  // —──────── AGENT HANDOFF & CONSENT ─────────—
-  function startAgentHandoff(){ /* unchanged */ }
-  function askLiveAgentConsent(){ /* unchanged */ }
+  function startAgentHandoff(){ /* unchanged… */ }
+  function askLiveAgentConsent(){ /* unchanged… */ }
 
   // —──────── DIALOG FLOW ─────────—
-  function showStep() {
-    if(STATE.idx >= STEPS.length) return finalizeFlow();
-    const step = STEPS[STATE.idx];
-    if(step.dependsOn && STATE.answers.topic !== step.dependsOn) {
+  function showStep(){
+    if(STATE.idx>=STEPS.length) return finalizeFlow();
+    const step=STEPS[STATE.idx];
+    if(step.dependsOn&&STATE.answers.topic!==step.dependsOn){
       STATE.idx++; return showStep();
     }
-    switch(step.type) {
+    switch(step.type){
       case 'smartChoice': renderSmartChoice(step); break;
       case 'choice':      renderChoice(step);       break;
       case 'input':       renderInput(step);        break;
@@ -233,10 +222,19 @@
   }
 
   // —──────── BOOTSTRAP CHAT ─────────—
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded',()=>{
     STATE.body      = document.getElementById('chat-body');
     STATE.inputPane = document.getElementById('chat-input');
-    addMessage("Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes.", 'bot', 0);
-    setTimeout(showStep, 800);
+
+    // anchor input-pane at bottom, make body scroll above it
+    STATE.inputPane.style.position = 'fixed';
+    STATE.inputPane.style.bottom   = '0';
+    STATE.inputPane.style.left     = '0';
+    STATE.inputPane.style.width    = '100%';
+    STATE.inputPane.style.backgroundColor = '#fff';
+    STATE.body.style.paddingBottom = STATE.inputPane.offsetHeight + 'px';
+
+    addMessage("Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes. 🙏",'bot',0);
+    setTimeout(showStep, 1000);
   });
 })();
