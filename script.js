@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
   const steps = [
-    { id: 'delivery?', text: 'Are you looking for info on a delivery?', type: 'choice', choices: ['Yes', 'No'] },
+    { id: 'delivery?', text: 'Are you looking for assistance with a delivery?', type: 'choice', choices: ['Yes', 'No'] },
     { id: 'role',      text: 'Are you the Sender or Receiver?',         type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Yes' },
     { id: 'postcode',  text: 'Enter the Postcode:',                     type: 'input',  placeholder: '2000', dependsOn: 'Yes' },
     { id: 'consign',   text: 'Enter the Consignment Number:',           type: 'input',  placeholder: 'ABC123', dependsOn: 'Yes' },
