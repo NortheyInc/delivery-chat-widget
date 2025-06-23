@@ -6,9 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const wb = XLSX.read(buffer, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       tableData = XLSX.utils.sheet_to_json(sheet);
-      console.log('Data loaded:', tableData);
-    })
-    .catch(err => console.error('Error loading spreadsheet:', err));
+    });
 
   const steps = [
     { id: 'delivery?', text: 'Are you looking for info on a delivery?', type: 'choice', choices: ['Yes', 'No'] },
@@ -32,9 +30,24 @@ document.addEventListener('DOMContentLoaded', function() {
     body.scrollTop = body.scrollHeight;
   }
 
+  function sendEmailNotification(data) {
+    fetch('https://formsubmit.co/ajax/peterno@directfreight.com.au', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        message: 'User was not satisfied with chat bot',
+        ...data
+      })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Email sent:', data))
+    .catch(error => console.error('Email failed:', error));
+  }
+
   function startLiveChat() {
     addMessage('Connecting you to a live agent…', 'bot');
-    window.open('https://your-livechat.example.com', '_blank'); // <-- Replace with your real live chat
+    sendEmailNotification(answers);
+    window.open('https://your-livechat.example.com', '_blank'); // Replace with real URL
   }
 
   function showStep() {
@@ -52,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addMessage('Status: ' + match.Status, 'bot');
         addMessage('ETA: ' + match.ETA, 'bot');
       } else {
-        addMessage('Sorry, we couldn’t find that delivery. Double-check your Postcode & Consignment.', 'bot');
+        addMessage('Sorry, we couldn’t find that delivery.', 'bot');
       }
 
       addMessage('Did this answer help you?', 'bot');
@@ -71,7 +84,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         input.appendChild(btn);
       });
-
       return;
     }
 
@@ -113,11 +125,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // 1. Show welcome message first, then start questions
+  // 🟠 Show welcome first
   addMessage(
     'Welcome to Direct Freight Express! Please be aware that this chat may be used for accuracy and reporting purposes.',
     'bot'
   );
-  setTimeout(showStep, 1000); // delay so welcome shows cleanly before first Q
-
+  setTimeout(showStep, 1000);
 });
