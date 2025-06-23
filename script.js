@@ -1,4 +1,25 @@
-const steps = [
+document.addEventListener('DOMContentLoaded', () => {
+  let tableData = [];  // will hold rows from Excel
+
+  // 1. Fetch the Excel file as an ArrayBuffer
+  fetch('data.xlsx')
+    .then(res => res.arrayBuffer())
+    .then(buffer => {
+      // 2. Read workbook
+      const wb = XLSX.read(buffer, { type: 'array' });
+      // 3. Get first sheet
+      const sheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      // 4. Convert to JSON array of objects
+      tableData = XLSX.utils.sheet_to_json(sheet);
+      console.log('Data loaded:', tableData);
+      // Now tableData = [ { Postcode: 2000, Consignment: "ABC123", Status: "On the way", ETA: "2025-06-25" }, … ]
+    })
+    .catch(err => console.error('Error loading spreadsheet:', err));
+
+  // … rest of your chat code follows …
+
+  const steps = [
   { id: 'delivery?', text: 'Are you looking for info on a delivery?', type: 'choice', choices: ['Yes', 'No'] },
   { id: 'role',    text: 'Are you the Sender or Receiver?',     type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Yes' },
   { id: 'postcode',text: 'Enter the Postcode:',                  type: 'input',  placeholder: '2000',              dependsOn: 'Yes' },
@@ -24,7 +45,26 @@ function showStep() {
   input.innerHTML = '';
   if (stepIndex >= steps.length) {
     addMessage('Thanks! Sending your info…', 'bot');
-    console.log(answers); // for now, we just log answers
+  // After all answers gathered:
+addMessage('Thanks! Finding your delivery status…', 'bot');
+
+// Find the matching row in tableData:
+const match = tableData.find(row =>
+  row.Postcode == answers.postcode &&
+  row.Consignment == answers.consign
+);
+
+if (match) {
+  // Show details from the spreadsheet
+  addMessage(`Status: ${match.Status}`, 'bot');
+  addMessage(`ETA: ${match.ETA}`, 'bot');
+} else {
+  addMessage('Sorry, we couldn’t find that delivery. Please double-check your postcode and consignment number.', 'bot');
+}
+
+// (Then you could still POST to your backend if you like)
+
+console.log(answers); // for now, we just log answers
     return;
   }
   let step = steps[stepIndex];
