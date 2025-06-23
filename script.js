@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
   const steps = [
-    { id: 'topic',     text: 'How can we assist you today? Please click on one of the buttons below, or write a brief sentence.', type: 'choice', choices: ['Track Consignment', 'Pickups', 'Sales'] },
+    {
+      id: 'topic',
+      text: 'How can we assist you today? Please click on one of the buttons below, or write a brief sentence.',
+      type: 'smartChoice',
+      choices: ['Track Consignment', 'Pickups', 'Sales']
+    },
     { id: 'role',      text: 'Are you the Sender or Receiver?',         type: 'choice', choices: ['Sender', 'Receiver'], dependsOn: 'Track Consignment' },
     { id: 'postcode',  text: 'Enter the Postcode:',                     type: 'input', dependsOn: 'Track Consignment' },
     { id: 'consign',   text: 'Enter the Consignment Number:',           type: 'input', dependsOn: 'Track Consignment' },
@@ -32,6 +37,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function normalize(str) {
     return String(str || '').trim().toLowerCase().replace(/\s+/g, '');
+  }
+
+  function matchIntent(userInput) {
+    const text = normalize(userInput);
+    if (text.includes("track") || text.includes("where") || text.includes("delivery")) return "Track Consignment";
+    if (text.includes("pickup") || text.includes("collect") || text.includes("pick up")) return "Pickups";
+    if (text.includes("quote") || text.includes("price") || text.includes("sales")) return "Sales";
+    return null;
   }
 
   function startLiveChat() {
@@ -105,6 +118,7 @@ Their responses:
     }
 
     const step = steps[stepIndex];
+
     if (step.dependsOn && answers['topic'] !== step.dependsOn) {
       stepIndex++;
       return showStep();
@@ -113,6 +127,38 @@ Their responses:
     addMessage(step.text, 'bot');
 
     if (step.type === 'choice') {
+      step.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'chat-btn';
+        btn.textContent = choice;
+        btn.onclick = () => {
+          answers[step.id] = choice;
+          addMessage(choice, 'user');
+          stepIndex++;
+          showStep();
+        };
+        input.appendChild(btn);
+      });
+    } else if (step.type === 'smartChoice') {
+      const txt = document.createElement('input');
+      txt.className = 'chat-text';
+      txt.placeholder = "Type here or click a button...";
+      txt.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && txt.value.trim()) {
+          const guess = matchIntent(txt.value);
+          if (guess) {
+            answers[step.id] = guess;
+            addMessage(txt.value, 'user');
+            stepIndex++;
+            showStep();
+          } else {
+            addMessage("Sorry, I didn't understand that. Can you please rephrase?", 'bot');
+          }
+        }
+      });
+      input.appendChild(txt);
+      txt.focus();
+
       step.choices.forEach(choice => {
         const btn = document.createElement('button');
         btn.className = 'chat-btn';
