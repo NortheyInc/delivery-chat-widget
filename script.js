@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- conversational steps ---
   const steps = [
-    { id: 'topic',   text: 'How can we assist you today?\nClick a button or type a brief sentence.',  type: 'smartChoice', choices: ['Track Consignment','Pickups','Sales'] },
+    { id: 'topic',   text: 'How can we assist you today?\n Please click on one of the below buttons or type a brief sentence.',  type: 'smartChoice', choices: ['Track Consignment','Pickups','Sales'] },
     { id: 'role',    text: 'Are you the Sender or Receiver?', type: 'choice',   choices: ['Sender','Receiver'], dependsOn: 'Track Consignment' },
     { id: 'postcode',text: 'Enter the Postcode:',           type: 'input',    dependsOn: 'Track Consignment' },
     { id: 'consign', text: 'Enter the Consignment Number:', type: 'input',    dependsOn: 'Track Consignment' },
@@ -221,6 +221,6 @@ Click to join: https://${location.host}/support.html?session=${session}
   }
 
   // kick it off:
-  addMessage("Welcome to Direct Freight Express! (For accuracy & reporting.)", "bot");
+  addMessage("Welcome to Direct Freight Express! \n This chat is monitered for security and training purposes.", "bot");
   setTimeout(showStep, 800);
 });
