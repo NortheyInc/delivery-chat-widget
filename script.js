@@ -8,7 +8,7 @@
   ];
 
   const STEPS = [
-    { id: "topic", text: "Hello! How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups", "Sales"] },
+    { id: "topic", text: "Hello! How may I assist you today? 😊", type: "smartChoice", choices: ["Track Consignment", "Pickups", "Sales"] },
     { id: "role", text: "Are you the Sender or Receiver, please?", type: "choice", choices: ["Sender", "Receiver"], dependsOn: "Track Consignment" },
     { id: "postcode", text: "Please enter the Postcode:", type: "input", dependsOn: "Track Consignment" },
     { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
@@ -76,10 +76,12 @@
         if (option === "Yes") {
           STATE.answers.topic = intent;
           STATE.idx++;
+          showStep();
         } else {
           addMessage("Alright, please choose again or rephrase. 😊", "bot");
+          STATE.idx = 0; // reset to first step to choose topic again
+          showStep();
         }
-        showStep();
       };
       STATE.inputPane.appendChild(btn);
     });
@@ -155,7 +157,7 @@
     txt.focus();
   }
 
-  // Main function to show each step
+  // ───────── MAIN CHAT FLOW ─────────
   function showStep() {
     if (STATE.idx >= STEPS.length) return finalizeFlow();
 
@@ -165,8 +167,10 @@
       return showStep();
     }
 
-    addMessage(step.text, "bot");
     STATE.inputPane.innerHTML = "";
+
+    // Show bot question first
+    addMessage(step.text, "bot", 0);
 
     if (step.type === "smartChoice") {
       const cdiv = document.createElement("div");
@@ -176,8 +180,8 @@
         btn.className = "chat-btn";
         btn.textContent = ch;
         btn.onclick = () => {
-          STATE.answers[step.id] = ch;
           addMessage(ch, "user");
+          STATE.answers[step.id] = ch;
           STATE.idx++;
           showStep();
         };
@@ -197,10 +201,12 @@
         if (e.key === "Enter" && txt.value.trim()) {
           const u = txt.value.trim();
           addMessage(u, "user");
-          wrap.remove();
           const intent = matchIntent(u);
-          if (intent) confirmIntent(intent);
-          else askLiveAgentConsent();
+          if (intent) {
+            confirmIntent(intent);
+          } else {
+            askLiveAgentConsent();
+          }
         }
       });
 
@@ -210,8 +216,8 @@
         btn.className = "chat-btn";
         btn.textContent = ch;
         btn.onclick = () => {
-          STATE.answers[step.id] = ch;
           addMessage(ch, "user");
+          STATE.answers[step.id] = ch;
           STATE.idx++;
           showStep();
         };
@@ -226,18 +232,18 @@
       input.addEventListener("keypress", e => {
         if (e.key === "Enter" && input.value.trim()) {
           const value = input.value.trim();
+
+          // Validation with error messages
           let valid = true;
           let errMsg = "";
 
           if (step.id === "postcode" && !validators.postcode(value)) {
             valid = false;
             errMsg = "Postcode must be 4 digits.";
-          }
-          if (step.id === "phone" && !validators.phone(value)) {
+          } else if (step.id === "phone" && !validators.phone(value)) {
             valid = false;
             errMsg = "Phone must be 10 digits, start 02/03/04/07/08.";
-          }
-          if (step.id === "consign" && !validators.consign(value)) {
+          } else if (step.id === "consign" && !validators.consign(value)) {
             valid = false;
             errMsg = "Consignment number must be 13 digits.";
           }
@@ -250,8 +256,24 @@
             return;
           }
 
+          // Save answer
           STATE.answers[step.id] = value;
           addMessage(value, "user");
+
+          // Special check after postcode and consignment inputs:
+          if (step.id === "consign") {
+            // Check if postcode+consign match a record:
+            const match = DELIVERY_DATA.find(record =>
+              normalize(record.POSTCODE) === normalize(STATE.answers.postcode) &&
+              normalize(record.CONSIGNMENT) === normalize(value)
+            );
+            if (!match) {
+              // No match - go to live agent consent
+              return askLiveAgentConsent();
+            }
+            // If match found, continue normal flow (phone then surname)
+          }
+
           STATE.idx++;
           showStep();
         }
@@ -267,7 +289,7 @@
     STATE.body = document.getElementById("chat-body");
     STATE.inputPane = document.getElementById("chat-input");
 
-    // Clear any fixed positioning styles on input panel, CSS handles layout
+    // Remove fixed positioning - CSS handles layout
     STATE.inputPane.style.position = "";
     STATE.inputPane.style.bottom = "";
     STATE.inputPane.style.left = "";
@@ -297,7 +319,7 @@
     window.addEventListener("resize", resizeBody);
 
     addMessage(
-      "Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes.",
+      "Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes. 🙏",
       "bot",
       0
     );
