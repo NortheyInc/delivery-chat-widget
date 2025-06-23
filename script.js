@@ -71,12 +71,13 @@ Their responses:
     input.innerHTML = '';
 
     if (stepIndex >= steps.length) {
-      const match = tableData.find(row =>
-        normalize(row.Postcode) === normalize(answers.postcode) &&
-        normalize(row.Consignment) === normalize(answers.consign) &&
-        normalize(row.Mobile || row.Phone) === normalize(answers.phone) &&
-        normalize(row.Name || row.Surname) === normalize(answers.surname)
-      );
+const match = tableData.find(row =>
+  normalize(row['POSTCODE']) === normalize(answers.postcode) &&
+  normalize(row['CONSIGNMENT']) === normalize(answers.consign) &&
+  normalize(row['RECEIVER PHONE']) === normalize(answers.phone) &&
+  normalize(row['RECEIVER NAME']) === normalize(answers.surname)
+);
+
 
       if (!match) {
         addMessage('❌ Sorry, we couldn’t verify your details. Please double-check.', 'bot');
