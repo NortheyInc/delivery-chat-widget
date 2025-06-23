@@ -2,8 +2,8 @@
   const DELIVERY_DATA = [
     { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4221", "RECEIVER PHONE": "0403642769" },
     { CONSIGNMENT: "1111198765432", ETA: "24/06/2025", "RECEIVER NAME": "Catania", POSTCODE: "2142", "RECEIVER PHONE": "0297218106" },
-    { CONSIGNMENT: "2222212345678", ETA: "26/06/2025", "RECEIVER NAME": "Cipolla", POSTCODE: "2028", "RECEIVER PHONE": "0492847511" },
-    { CONSIGNMENT: "6666698765432", ETA: "27/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404498449" },
+    { CONSIGNMENT: "2222212345678", ETA: "25/06/2025", "RECEIVER NAME": "Cipolla", POSTCODE: "2028", "RECEIVER PHONE": "0492847511" },
+    { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404498449" },
   ];
 
   const STEPS = [
@@ -72,47 +72,6 @@
     showStep();
   }
 
-  function confirmIntent(intent) {
-    STATE.inputPane.innerHTML = "";
-    addMessage(`Please confirm: ${intent}?`, "bot").then(() => {
-      ["Yes", "No"].forEach(option => {
-        const btn = document.createElement("button");
-        btn.className = "chat-btn";
-        btn.textContent = option;
-        btn.onclick = () => {
-          addMessage(option, "user");
-          if (option === "Yes") {
-            STATE.answers.topic = intent;
-            if (intent === "Pickups") {
-              addMessage("This feature coming soon.", "bot");
-              STATE.inputPane.innerHTML = "";
-              const startAgainBtn = document.createElement("button");
-              startAgainBtn.className = "chat-btn";
-              startAgainBtn.textContent = "Start Again";
-              startAgainBtn.onclick = () => resetConversation();
-              const exitBtn = document.createElement("button");
-              exitBtn.className = "chat-btn";
-              exitBtn.textContent = "Exit";
-              exitBtn.onclick = () => {
-                addMessage("Alright, feel free to ask if you need anything else.", "bot");
-                STATE.inputPane.innerHTML = "";
-              };
-              STATE.inputPane.append(startAgainBtn, exitBtn);
-            } else {
-              STATE.idx++;
-              showStep();
-            }
-          } else {
-            addMessage("Alright, please choose again or rephrase.", "bot");
-            STATE.idx = 0;
-            showStep();
-          }
-        };
-        STATE.inputPane.appendChild(btn);
-      });
-    });
-  }
-
   function askTryAgain() {
     STATE.inputPane.innerHTML = "";
     addMessage("Sorry, those details do not match anything in the system.", "bot");
@@ -121,15 +80,56 @@
         const btn = document.createElement("button");
         btn.className = "chat-btn";
         btn.textContent = label;
-        btn.onclick = () => {
-          addMessage(label, "user");
+        btn.onclick = async () => {
+          await addMessage(label, "user");
           if (label === "Yes") {
             STATE.answers = {};
             STATE.idx = 1;
             showStep();
           } else {
-            addMessage("Alright, how else can I help you?", "bot");
+            await addMessage("Alright, how else can I help you?", "bot");
             STATE.inputPane.innerHTML = "";
+          }
+        };
+        STATE.inputPane.appendChild(btn);
+      });
+    });
+  }
+
+  function confirmIntent(intent) {
+    STATE.inputPane.innerHTML = "";
+    addMessage(`Please confirm: ${intent}?`, "bot").then(() => {
+      ["Yes", "No"].forEach(option => {
+        const btn = document.createElement("button");
+        btn.className = "chat-btn";
+        btn.textContent = option;
+        btn.onclick = async () => {
+          await addMessage(option, "user");
+          if (option === "Yes") {
+            STATE.answers.topic = intent;
+            if (intent === "Pickups") {
+              await addMessage("This feature coming soon.", "bot");
+              STATE.inputPane.innerHTML = "";
+              const startAgainBtn = document.createElement("button");
+              startAgainBtn.className = "chat-btn";
+              startAgainBtn.textContent = "Start Again";
+              startAgainBtn.onclick = () => resetConversation();
+              const exitBtn = document.createElement("button");
+              exitBtn.className = "chat-btn";
+              exitBtn.textContent = "Exit";
+              exitBtn.onclick = async () => {
+                await addMessage("Alright, feel free to ask if you need anything else.", "bot");
+                STATE.inputPane.innerHTML = "";
+              };
+              STATE.inputPane.append(startAgainBtn, exitBtn);
+            } else {
+              STATE.idx++;
+              showStep();
+            }
+          } else {
+            await addMessage("Alright, please choose again or rephrase.", "bot");
+            STATE.idx = 0;
+            showStep();
           }
         };
         STATE.inputPane.appendChild(btn);
@@ -181,19 +181,19 @@
     send.className = "chat-btn";
     send.textContent = "Send";
 
-    send.onclick = () => {
+    send.onclick = async () => {
       const q = txt.value.trim().toLowerCase();
       if (!q) return;
-      addMessage(txt.value.trim(), "user");
+      await addMessage(txt.value.trim(), "user");
 
       if (q.includes("time") && q.includes("delivery")) {
         if (isFutureDate(match.ETA)) {
-          addMessage("Please check back after 8:30am on the ETA date.", "bot");
+          await addMessage("Please check back after 8:30am on the ETA date.", "bot");
         } else {
-          addMessage("Your delivery time is currently not available.", "bot");
+          await addMessage("Your delivery time is currently not available.", "bot");
         }
       } else {
-        addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
+        await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
       }
       txt.value = "";
     };
@@ -242,10 +242,10 @@
         const btn = document.createElement("button");
         btn.className = "chat-btn";
         btn.textContent = ch;
-        btn.onclick = () => {
-          addMessage(ch, "user");
+        btn.onclick = async () => {
+          await addMessage(ch, "user");
           if (ch === "Pickups") {
-            addMessage("This feature coming soon.", "bot");
+            await addMessage("This feature coming soon.", "bot");
             STATE.inputPane.innerHTML = "";
             const startAgainBtn = document.createElement("button");
             startAgainBtn.className = "chat-btn";
@@ -254,8 +254,8 @@
             const exitBtn = document.createElement("button");
             exitBtn.className = "chat-btn";
             exitBtn.textContent = "Exit";
-            exitBtn.onclick = () => {
-              addMessage("Alright, feel free to ask if you need anything else.", "bot");
+            exitBtn.onclick = async () => {
+              await addMessage("Alright, feel free to ask if you need anything else.", "bot");
               STATE.inputPane.innerHTML = "";
             };
             STATE.inputPane.append(startAgainBtn, exitBtn);
@@ -277,16 +277,13 @@
       STATE.inputPane.append(cdiv, wrap);
 
       txt.focus();
-      txt.addEventListener("keypress", e => {
+      txt.addEventListener("keypress", async e => {
         if (e.key === "Enter" && txt.value.trim()) {
           const u = txt.value.trim();
-          addMessage(u, "user");
+          await addMessage(u, "user");
           const intent = matchIntent(u);
-          if (intent) {
-            confirmIntent(intent);
-          } else {
-            askTryAgain();
-          }
+          if (intent) confirmIntent(intent);
+          else askTryAgain();
         }
       });
 
@@ -295,13 +292,11 @@
       input.className = "chat-text";
       input.placeholder = "Enter here…";
 
-      input.addEventListener("keypress", e => {
+      input.addEventListener("keypress", async e => {
         if (e.key === "Enter" && input.value.trim()) {
           const value = input.value.trim();
-
           let valid = true;
           let errMsg = "";
-
           if (step.id === "postcode" && !validators.postcode(value)) {
             valid = false;
             errMsg = "Postcode must be 4 digits.";
@@ -312,7 +307,6 @@
             valid = false;
             errMsg = "Consignment number must be 13 digits.";
           }
-
           if (!valid) {
             const err = document.createElement("div");
             err.className = "error";
@@ -320,10 +314,8 @@
             STATE.inputPane.appendChild(err);
             return;
           }
-
           STATE.answers[step.id] = value;
-          addMessage(value, "user");
-
+          await addMessage(value, "user");
           if (step.id === "consign") {
             const match = DELIVERY_DATA.find(record =>
               normalize(record.POSTCODE) === normalize(STATE.answers.postcode) &&
@@ -331,7 +323,6 @@
             );
             if (!match) return askTryAgain();
           }
-
           STATE.idx++;
           showStep();
         }
@@ -350,19 +341,14 @@
       const widget = document.getElementById("chat-widget");
       const header = document.getElementById("chat-header");
       const input = document.getElementById("chat-input");
-
       const totalHeight = widget.clientHeight;
       const headerHeight = header.offsetHeight;
       const inputHeight = input.offsetHeight;
-      const bodyHeight = totalHeight - headerHeight - inputHeight;
-
-      STATE.body.style.height = bodyHeight + "px";
+      STATE.body.style.height = (totalHeight - headerHeight - inputHeight) + "px";
       STATE.body.style.overflowY = "auto";
     }
-
     resizeBody();
     window.addEventListener("resize", resizeBody);
-
     addMessage(
       "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes.",
       "bot",
