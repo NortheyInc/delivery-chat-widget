@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DFE Support Console</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="chat-widget">
+    <div id="chat-header">
+      <div class="logo"></div>
+      <h1>Support Console</h1>
+    </div>
+    <div id="chat-body"></div>
+    <div id="chat-input">
+      <input id="agentInput" class="chat-text" placeholder="Type your message..." />
+      <button id="agentSend" class="chat-btn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    // parse session ID from URL
+    const params = new URLSearchParams(location.search);
+    const session = params.get('session');
+    if (!session) {
+      document.body.innerHTML = '<p>Invalid session.</p>';
+      throw new Error('No session');
+    }
+
+    const channel = new BroadcastChannel('dfe-chat-' + session);
+    const body = document.getElementById('chat-body');
+    const input = document.getElementById('agentInput');
+    const btn   = document.getElementById('agentSend');
+
+    function addMessage(text, who){
+      const d = document.createElement('div');
+      d.className = 'msg ' + who;
+      d.textContent = text;
+      body.appendChild(d);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    btn.onclick = () => {
+      const t = input.value.trim();
+      if (!t) return;
+      addMessage(t, 'agent');
+      channel.postMessage({ sender:'agent', text: t });
+      input.value = '';
+    };
+    input.addEventListener('keypress', e=>{
+      if (e.key === 'Enter') btn.click();
+    });
+
+    // receive customer messages
+    channel.onmessage = ev => {
+      addMessage(ev.data.text, 'user');
+    };
+
+    addMessage('Support console ready. Session: ' + session, 'bot');
+  </script>
+</body>
+</html>
