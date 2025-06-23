@@ -8,7 +8,7 @@
   ];
 
   const STEPS = [
-    { id: "topic", text: "Hello! How may I assist you today? 😊", type: "smartChoice", choices: ["Track Consignment", "Pickups", "Sales"] },
+    { id: "topic", text: "Hello! How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups", "Sales"] },
     { id: "role", text: "Are you the Sender or Receiver, please?", type: "choice", choices: ["Sender", "Receiver"], dependsOn: "Track Consignment" },
     { id: "postcode", text: "Please enter the Postcode:", type: "input", dependsOn: "Track Consignment" },
     { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
@@ -297,7 +297,7 @@
     window.addEventListener("resize", resizeBody);
 
     addMessage(
-      "Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes. 🙏",
+      "Welcome to Direct Freight Express! This chat is monitored for accuracy & reporting purposes.",
       "bot",
       0
     );
