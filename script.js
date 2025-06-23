@@ -121,7 +121,7 @@ Their responses:
 👉 Click here to reply with wait time: https://northeyinc.github.io/live-chat/
     `.trim();
 
-    fetch('https://formsubmit.co/ajax/YOUR_EMAIL@example.com', {
+    fetch('https://formsubmit.co/ajax/peterno@directfreight.com.au', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
