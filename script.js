@@ -6,12 +6,13 @@ document.addEventListener('DOMContentLoaded', function () {
       const wb = XLSX.read(buffer, { type: 'array' });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       tableData = XLSX.utils.sheet_to_json(sheet);
+      window.tableData = tableData; // So you can test in console
     });
 
   const steps = [
     {
       id: 'topic',
-      text: 'How can we assist you today? \n Please click on one of the buttons below, or write a brief sentence.',
+      text: 'How can we assist you today?\nPlease click on one of the buttons below, or write a brief sentence.',
       type: 'smartChoice',
       choices: ['Track Consignment', 'Pickups', 'Sales']
     },
@@ -27,7 +28,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const body = document.getElementById('chat-body');
   const input = document.getElementById('chat-input');
 
-  function addMessage(text, who) {
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function addMessage(text, who) {
+    if (who === 'bot') await delay(600);
     const div = document.createElement('div');
     div.className = 'msg ' + who;
     div.textContent = text;
@@ -40,13 +46,13 @@ document.addEventListener('DOMContentLoaded', function () {
       .toString()
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, '');
+      .replace(/[^a-z0-9]/gi, '');
   }
 
   function matchIntent(userInput) {
     const text = normalize(userInput);
     if (text.includes("track") || text.includes("where") || text.includes("delivery")) return "Track Consignment";
-    if (text.includes("pickup") || text.includes("collect") || text.includes("pick up")) return "Pickups";
+    if (text.includes("pickup") || text.includes("collect") || text.includes("pickup")) return "Pickups";
     if (text.includes("quote") || text.includes("price") || text.includes("sales")) return "Sales";
     return null;
   }
@@ -104,25 +110,33 @@ Their responses:
     input.appendChild(btn);
   }
 
-  function showStep() {
+  async function showStep() {
     input.innerHTML = '';
 
     if (stepIndex >= steps.length) {
       if (answers.topic !== 'Track Consignment') {
-        addMessage('Thanks for letting us know. We’ll pass this to a team member.', 'bot');
+        await addMessage('Thanks for letting us know. We’ll pass this to a team member.', 'bot');
         startLiveChat();
         return;
       }
 
-      const match = tableData.find(row =>
-        normalize(row['POSTCODE']) === normalize(answers.postcode) &&
-        normalize(row['CONSIGNMENT']) === normalize(answers.consign) &&
-        normalize(row['RECEIVER PHONE']) === normalize(answers.phone) &&
-        normalize(row['RECEIVER NAME']) === normalize(answers.surname)
-      );
+      const match = tableData.find(row => {
+        const matchPostcode = normalize(row['POSTCODE']) === normalize(answers.postcode);
+        const matchConsign  = normalize(row['CONSIGNMENT']) === normalize(answers.consign);
+        const matchPhone    = normalize(row['RECEIVER PHONE']) === normalize(answers.phone);
+        const matchName     = normalize(row['RECEIVER NAME']) === normalize(answers.surname);
+
+        console.log("Checking row:", row);
+        console.log("Postcode match:", matchPostcode);
+        console.log("Consign match:", matchConsign);
+        console.log("Phone match:", matchPhone);
+        console.log("Name match:", matchName);
+
+        return matchPostcode && matchConsign && matchPhone && matchName;
+      });
 
       if (!match) {
-        addMessage('❌ Thank you. Unfortunately, we couldn’t verify your details. Please double-check.', 'bot');
+        await addMessage('❌ Thank you. Unfortunately, we couldn’t verify your details. Please double-check.', 'bot');
         fallbackOption();
         return;
       }
@@ -132,12 +146,12 @@ Their responses:
       todayPlus1.setDate(todayPlus1.getDate() + 1);
 
       if (eta >= todayPlus1) {
-        addMessage('✅ Thank you! Your delivery is on the way.', 'bot');
-        addMessage('📦 ETA: ' + eta.toDateString(), 'bot');
+        await addMessage('✅ Thank you! Your delivery is on the way.', 'bot');
+        await addMessage('📦 ETA: ' + eta.toDateString(), 'bot');
         return;
       }
 
-      addMessage('Thanks. It looks like your delivery may require assistance from a live agent.', 'bot');
+      await addMessage('Thanks. It looks like your delivery may require assistance from a live agent.', 'bot');
       startLiveChat();
       return;
     }
@@ -150,7 +164,7 @@ Their responses:
     }
 
     if (step.type === 'smartChoice') {
-      addMessage(step.text, 'bot');
+      await addMessage(step.text, 'bot');
 
       const txt = document.createElement('input');
       txt.className = 'chat-text';
@@ -196,10 +210,10 @@ Their responses:
         const btn = document.createElement('button');
         btn.className = 'chat-btn';
         btn.textContent = choice;
-        btn.onclick = () => {
+        btn.onclick = async () => {
           answers[step.id] = choice;
-          addMessage(choice, 'user');
-          addMessage(`Thanks, got that: ${choice}`, 'bot');
+          await addMessage(choice, 'user');
+          await addMessage(`Thanks, got that: ${choice}`, 'bot');
           stepIndex++;
           showStep();
         };
@@ -207,15 +221,15 @@ Their responses:
       });
 
     } else if (step.type === 'choice') {
-      addMessage(step.text, 'bot');
+      await addMessage(step.text, 'bot');
       step.choices.forEach(choice => {
         const btn = document.createElement('button');
         btn.className = 'chat-btn';
         btn.textContent = choice;
-        btn.onclick = () => {
+        btn.onclick = async () => {
           answers[step.id] = choice;
-          addMessage(choice, 'user');
-          addMessage(`Thanks, noted: ${choice}`, 'bot');
+          await addMessage(choice, 'user');
+          await addMessage(`Thanks, noted: ${choice}`, 'bot');
           stepIndex++;
           showStep();
         };
@@ -223,7 +237,7 @@ Their responses:
       });
 
     } else {
-      addMessage(step.text, 'bot');
+      await addMessage(step.text, 'bot');
       const txt = document.createElement('input');
       txt.className = 'chat-text';
       txt.addEventListener('keypress', function (e) {
