@@ -1,9 +1,9 @@
 (function () {
   const DELIVERY_DATA = [
     { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4221", "RECEIVER PHONE": "0403642769" },
-    { CONSIGNMENT: "1111198765432", ETA: "24/06/2025", "RECEIVER NAME": "Catania", POSTCODE: "2142", "RECEIVER PHONE": "0297218106" },
+    { CONSIGNMENT: "1111198765432", ETA: "24/06/2025", "RECEIVER NAME": "Catania", POSTCODE: "2142", "RECEIVER PHONE": "0297211111" },
     { CONSIGNMENT: "2222212345678", ETA: "25/06/2025", "RECEIVER NAME": "Cipolla", POSTCODE: "2028", "RECEIVER PHONE": "0492847511" },
-    { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404498449" },
+    { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404499999" },
   ];
 
   const STEPS = [
@@ -72,74 +72,86 @@
     showStep();
   }
 
-  function askTryAgain() {
+  async function askTryAgain() {
     STATE.inputPane.innerHTML = "";
-    addMessage("Sorry, those details do not match anything in the system.", "bot");
-    addMessage("Would you like to try again?", "bot").then(() => {
-      ["Yes", "No"].forEach(label => {
-        const btn = document.createElement("button");
-        btn.className = "chat-btn";
-        btn.textContent = label;
-        btn.onclick = async () => {
-          await addMessage(label, "user");
-          if (label === "Yes") {
-            STATE.answers = {};
-            STATE.idx = 1;
-            showStep();
-          } else {
-            await addMessage("Alright, how else can I help you?", "bot");
+    await addMessage("Sorry, those details do not match anything in the system.", "bot");
+    await addMessage("Would you like to try again?", "bot");
+
+    // Clear and add buttons inside a container div for better placement
+    const btnContainer = document.createElement("div");
+    btnContainer.className = "choice-container";
+
+    ["Yes", "No"].forEach(label => {
+      const btn = document.createElement("button");
+      btn.className = "chat-btn";
+      btn.textContent = label;
+      btn.onclick = async () => {
+        // Remove buttons immediately to avoid duplicate clicks
+        btnContainer.innerHTML = "";
+        await addMessage(label, "user");
+        if (label === "Yes") {
+          STATE.answers = {};
+          STATE.idx = 1;
+          showStep();
+        } else {
+          await addMessage("Alright, how else can I help you?", "bot");
+          STATE.inputPane.innerHTML = "";
+        }
+      };
+      btnContainer.appendChild(btn);
+    });
+    STATE.inputPane.appendChild(btnContainer);
+  }
+
+  async function confirmIntent(intent) {
+    STATE.inputPane.innerHTML = "";
+    await addMessage(`Please confirm: ${intent}?`, "bot");
+
+    const btnContainer = document.createElement("div");
+    btnContainer.className = "choice-container";
+
+    ["Yes", "No"].forEach(option => {
+      const btn = document.createElement("button");
+      btn.className = "chat-btn";
+      btn.textContent = option;
+      btn.onclick = async () => {
+        btnContainer.innerHTML = "";
+        await addMessage(option, "user");
+        if (option === "Yes") {
+          STATE.answers.topic = intent;
+          if (intent === "Pickups") {
+            await addMessage("This feature coming soon.", "bot");
             STATE.inputPane.innerHTML = "";
-          }
-        };
-        STATE.inputPane.appendChild(btn);
-      });
-    });
-  }
-
-  function confirmIntent(intent) {
-    STATE.inputPane.innerHTML = "";
-    addMessage(`Please confirm: ${intent}?`, "bot").then(() => {
-      ["Yes", "No"].forEach(option => {
-        const btn = document.createElement("button");
-        btn.className = "chat-btn";
-        btn.textContent = option;
-        btn.onclick = async () => {
-          await addMessage(option, "user");
-          if (option === "Yes") {
-            STATE.answers.topic = intent;
-            if (intent === "Pickups") {
-              await addMessage("This feature coming soon.", "bot");
+            const startAgainBtn = document.createElement("button");
+            startAgainBtn.className = "chat-btn";
+            startAgainBtn.textContent = "Start Again";
+            startAgainBtn.onclick = () => resetConversation();
+            const exitBtn = document.createElement("button");
+            exitBtn.className = "chat-btn";
+            exitBtn.textContent = "Exit";
+            exitBtn.onclick = async () => {
+              await addMessage("Alright, feel free to ask if you need anything else.", "bot");
               STATE.inputPane.innerHTML = "";
-              const startAgainBtn = document.createElement("button");
-              startAgainBtn.className = "chat-btn";
-              startAgainBtn.textContent = "Start Again";
-              startAgainBtn.onclick = () => resetConversation();
-              const exitBtn = document.createElement("button");
-              exitBtn.className = "chat-btn";
-              exitBtn.textContent = "Exit";
-              exitBtn.onclick = async () => {
-                await addMessage("Alright, feel free to ask if you need anything else.", "bot");
-                STATE.inputPane.innerHTML = "";
-              };
-              STATE.inputPane.append(startAgainBtn, exitBtn);
-            } else {
-              STATE.idx++;
-              showStep();
-            }
+            };
+            STATE.inputPane.append(startAgainBtn, exitBtn);
           } else {
-            await addMessage("Alright, please choose again or rephrase.", "bot");
-            STATE.idx = 0;
+            STATE.idx++;
             showStep();
           }
-        };
-        STATE.inputPane.appendChild(btn);
-      });
+        } else {
+          await addMessage("Alright, please choose again or rephrase.", "bot");
+          STATE.idx = 0;
+          showStep();
+        }
+      };
+      btnContainer.appendChild(btn);
     });
+    STATE.inputPane.appendChild(btnContainer);
   }
 
-  function finalizeFlow() {
+  async function finalizeFlow() {
     if (STATE.answers.topic !== "Track Consignment") {
-      addMessage("Connecting you to a live customer service representative now.", "bot");
+      await addMessage("Connecting you to a live customer service representative now.", "bot");
       STATE.inputPane.innerHTML = "";
       return;
     }
@@ -155,23 +167,19 @@
 
     STATE.consignmentMatch = match;
 
-    addMessage("Thank you. We have matched your information.", "bot");
-    addMessage("How may I assist you?", "bot");
+    await addMessage("Thank you. We have matched your information.", "bot");
+    await addMessage("How may I assist you?", "bot");
 
     STATE.inputPane.innerHTML = "";
 
     const etaBtn = document.createElement("button");
     etaBtn.className = "chat-btn";
     etaBtn.textContent = "ETA";
-    etaBtn.onclick = () => addMessage(`Your ETA is ${match.ETA}.`, "bot");
-
-    const urgentBtn = document.createElement("button");
-    urgentBtn.className = "chat-btn";
-    urgentBtn.textContent = "Flag Freight as Urgent";
-    urgentBtn.onclick = () => {
-      addMessage("Request to flag freight as urgent received. Customer service has been notified.", "bot");
-      sendUrgentEmail(match, STATE.answers);
+    etaBtn.onclick = async () => {
+      await addMessage(`Your ETA is ${match.ETA}.`, "bot");
     };
+
+    // Removed the "Flag Freight as Urgent" button as requested
 
     const txt = document.createElement("input");
     txt.className = "chat-text";
@@ -202,7 +210,7 @@
       if (e.key === "Enter") send.click();
     });
 
-    STATE.inputPane.append(etaBtn, urgentBtn, txt, send);
+    STATE.inputPane.append(etaBtn, txt, send);
     txt.focus();
   }
 
@@ -243,6 +251,8 @@
         btn.className = "chat-btn";
         btn.textContent = ch;
         btn.onclick = async () => {
+          // Disable buttons immediately to avoid multiple clicks
+          Array.from(cdiv.children).forEach(b => b.disabled = true);
           await addMessage(ch, "user");
           if (ch === "Pickups") {
             await addMessage("This feature coming soon.", "bot");
@@ -279,11 +289,14 @@
       txt.focus();
       txt.addEventListener("keypress", async e => {
         if (e.key === "Enter" && txt.value.trim()) {
+          // Disable buttons & input to avoid multiple submissions
+          Array.from(cdiv.children).forEach(b => b.disabled = true);
+          txt.disabled = true;
           const u = txt.value.trim();
           await addMessage(u, "user");
           const intent = matchIntent(u);
-          if (intent) confirmIntent(intent);
-          else askTryAgain();
+          if (intent) await confirmIntent(intent);
+          else await askTryAgain();
         }
       });
 
@@ -292,8 +305,9 @@
       input.className = "chat-text";
       input.placeholder = "Enter here…";
 
-      input.addEventListener("keypress", async e => {
+      input.addEventListener("keypress",	async e => {
         if (e.key === "Enter" && input.value.trim()) {
+          input.disabled = true; // prevent multi submit
           const value = input.value.trim();
           let valid = true;
           let errMsg = "";
@@ -312,6 +326,7 @@
             err.className = "error";
             err.textContent = errMsg;
             STATE.inputPane.appendChild(err);
+            input.disabled = false;
             return;
           }
           STATE.answers[step.id] = value;
@@ -349,11 +364,13 @@
     }
     resizeBody();
     window.addEventListener("resize", resizeBody);
+
     addMessage(
       "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes.",
       "bot",
       0
-    );
-    setTimeout(showStep, 1000);
+    ).then(() => {
+      setTimeout(showStep, 1000);
+    });
   });
 })();
