@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const steps = [
     {
       id: 'topic',
-      text: 'How can we assist you today? Please click on one of the buttons below, or write a brief sentence.',
+      text: 'How can we assist you today? \n Please click on one of the buttons below, or write a brief sentence.',
       type: 'smartChoice',
       choices: ['Track Consignment', 'Pickups', 'Sales']
     },
@@ -149,35 +149,41 @@ Their responses:
       return showStep();
     }
 
-    addMessage(step.text, 'bot');
+    if (step.type === 'smartChoice') {
+      addMessage(step.text, 'bot');
 
-    if (step.type === 'choice') {
-      step.choices.forEach(choice => {
-        const btn = document.createElement('button');
-        btn.className = 'chat-btn';
-        btn.textContent = choice;
-        btn.onclick = () => {
-          answers[step.id] = choice;
-          addMessage(`Thanks, noted: ${choice}`, 'bot');
-          addMessage(choice, 'user');
-          stepIndex++;
-          showStep();
-        };
-        input.appendChild(btn);
-      });
-    } else if (step.type === 'smartChoice') {
       const txt = document.createElement('input');
       txt.className = 'chat-text';
       txt.placeholder = "Type here or click a button...";
       txt.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && txt.value.trim()) {
-          const guess = matchIntent(txt.value);
+          const userText = txt.value.trim();
+          addMessage(userText, 'user');
+
+          const guess = matchIntent(userText);
           if (guess) {
-            answers[step.id] = guess;
-            addMessage(`Thanks, got that: ${guess}`, 'bot');
-            addMessage(txt.value, 'user');
-            stepIndex++;
-            showStep();
+            input.innerHTML = '';
+            addMessage(`Just to confirm, are you asking about: ${guess}?`, 'bot');
+
+            const yesBtn = document.createElement('button');
+            yesBtn.className = 'chat-btn';
+            yesBtn.textContent = 'Yes';
+            yesBtn.onclick = () => {
+              answers[step.id] = guess;
+              stepIndex++;
+              showStep();
+            };
+
+            const noBtn = document.createElement('button');
+            noBtn.className = 'chat-btn';
+            noBtn.textContent = 'No';
+            noBtn.onclick = () => {
+              addMessage("No problem! Please click one of the buttons below or rephrase your question.", 'bot');
+              showStep(); // restart step
+            };
+
+            input.appendChild(yesBtn);
+            input.appendChild(noBtn);
           } else {
             fallbackOption();
           }
@@ -192,21 +198,39 @@ Their responses:
         btn.textContent = choice;
         btn.onclick = () => {
           answers[step.id] = choice;
-          addMessage(`Thanks, got that: ${choice}`, 'bot');
           addMessage(choice, 'user');
+          addMessage(`Thanks, got that: ${choice}`, 'bot');
           stepIndex++;
           showStep();
         };
         input.appendChild(btn);
       });
+
+    } else if (step.type === 'choice') {
+      addMessage(step.text, 'bot');
+      step.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'chat-btn';
+        btn.textContent = choice;
+        btn.onclick = () => {
+          answers[step.id] = choice;
+          addMessage(choice, 'user');
+          addMessage(`Thanks, noted: ${choice}`, 'bot');
+          stepIndex++;
+          showStep();
+        };
+        input.appendChild(btn);
+      });
+
     } else {
+      addMessage(step.text, 'bot');
       const txt = document.createElement('input');
       txt.className = 'chat-text';
       txt.addEventListener('keypress', function (e) {
         if (e.key === 'Enter' && txt.value.trim()) {
           answers[step.id] = txt.value.trim();
-          addMessage(`Thanks for that.`, 'bot');
           addMessage(txt.value.trim(), 'user');
+          addMessage("Thanks for that.", 'bot');
           stepIndex++;
           showStep();
         }
