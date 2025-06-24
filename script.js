@@ -117,7 +117,7 @@
   async function finalizeFlow() {
     await addMessage("Thank you. We have matched your information.", "bot");
     await addMessage(`Your delivery is scheduled for ${STATE.consignmentMatch.ETA}.`, "bot");
-    await addMessage("How may I assist you?", "bot");
+    await addMessage("Is there anything else I can assist you with?", "bot");
 
     STATE.inputPane.innerHTML = "";
 
