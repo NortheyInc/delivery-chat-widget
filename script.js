@@ -24,11 +24,7 @@
     return eta.toDateString() === new Date().toDateString();
   };
 
-  // Correct sendEmailNotification function with your email inside
   const sendEmailNotification = async (subject, body) => {
-    // Your actual email logic here.
-    // For example, you might send to your backend server or an email API.
-    // For now, simulate with console log and delay:
     console.log(`Sending email to peterno@directfreight.com.au`);
     console.log("Subject:", subject);
     console.log("Body:", body);
@@ -139,7 +135,6 @@
       if (!q) return;
       await addMessage(qRaw, "user");
 
-      // Check special commands with manners:
       if (["realperson", "speakwithsomeone"].includes(q)) {
         await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
         await sendEmailNotification(
@@ -156,7 +151,6 @@
         return;
       }
 
-      // Handle common delivery questions:
       if (q.includes("when") && q.includes("deliver")) {
         await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}.`, "bot");
       } else if (q.includes("time")) {
@@ -294,10 +288,9 @@
     resizeBody();
     window.addEventListener("resize", resizeBody);
 
-    addMessage(
-      "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes.",
-      "bot",
-      0
-    ).then(() => setTimeout(showStep, 800));
+    // ✅ Split opening message into multiple parts
+    addMessage("Welcome to Direct Freight Express.", "bot", 0)
+      .then(() => addMessage("This chat is monitored for accuracy and reporting purposes.", "bot"))
+      .then(() => setTimeout(showStep, 800));
   });
 })();
