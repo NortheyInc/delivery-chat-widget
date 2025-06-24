@@ -211,13 +211,13 @@ if (wantsLiveChat) {
 
   const connectBtn = document.createElement("button");
   connectBtn.className = "chat-btn";
-  connectBtn.textContent = "Connect me to a team member";
+  connectBtn.textContent = "Connect to a team member";
   STATE.inputPane.innerHTML = "";
   STATE.inputPane.appendChild(connectBtn);
 
   connectBtn.onclick = async () => {
     // 1) echo the user’s click
-    await addMessage("Connect me to a team member", "user");
+    await addMessage("Connect to a team member", "user");
 
     // 2) send the Formsubmit email
     await sendEmailNotification(details);
