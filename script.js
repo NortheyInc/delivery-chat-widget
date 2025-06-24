@@ -102,7 +102,7 @@
     STATE.inputPane.appendChild(container);
   }
 
- async function finalizeFlow() {
+async function finalizeFlow() {
   await addMessage("Thank you. We have matched your information.", "bot");
   await addMessage(`Your delivery is scheduled for ${STATE.consignmentMatch.ETA}.`, "bot");
   await addMessage("Is there anything else I can assist you with?", "bot");
@@ -130,7 +130,6 @@
     const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
 
     if (wantsLiveChat) {
-      // Compose email body with matched details
       const details = STATE.consignmentMatch ? 
         `Consignment: ${STATE.consignmentMatch.CONSIGNMENT}\n` +
         `ETA: ${STATE.consignmentMatch.ETA}\n` +
@@ -143,7 +142,6 @@
       await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
       await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
 
-      // Show button to connect to team member
       const connectBtn = document.createElement("button");
       connectBtn.className = "chat-btn";
       connectBtn.textContent = "Connect me to a team member";
@@ -153,10 +151,21 @@
       connectBtn.onclick = async () => {
         await addMessage("Connect me to a team member", "user");
         await addMessage("A team member will join the chat shortly.", "bot");
-        STATE.inputPane.innerHTML = ""; // Clear input area after
+        STATE.inputPane.innerHTML = "";
       };
 
       return;
+    }
+
+    // Check if user says "Yes" (or similar) to "anything else I can assist you with?"
+    const positiveReplies = ["yes", "surecan", "yesplease", "yeah", "yep", "yup"];
+    const isPositive = positiveReplies.some(p => q.includes(p));
+
+    if (isPositive) {
+      await addMessage("How can I help?", "bot");
+      input.value = "";
+      input.focus();
+      return; // keep chat open for new question
     }
 
     if (["that'sall", "thatsall", "no", "thanks"].includes(q)) {
@@ -184,7 +193,6 @@
   STATE.inputPane.append(input, send);
   input.focus();
 }
-
 
   async function showStep() {
     if (STATE.stepStarted) return; // prevent double starts
