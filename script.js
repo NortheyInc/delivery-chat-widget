@@ -28,35 +28,35 @@
   };
 
 async function sendEmailNotification(details) {
-  // 1) Create a <form> element
-  const form = document.createElement('form');
-  form.action = 'https://formsubmit.co/peterno@directfreight.com.au';
-  form.method = 'POST';
-  form.style.display = 'none';
+  // Using the AJAX endpoint approach:
+  const url = 'https://formsubmit.co/ajax/peterno@directfreight.com.au';
 
-  // 2) Helper to append <input name=… value=…>
-  const addField = (name, value) => {
-    const inp = document.createElement('input');
-    inp.type = 'hidden';
-    inp.name = name;
-    inp.value = value;
-    form.appendChild(inp);
+  const payload = {
+    _subject:      'Live Chat Request',
+    Consignment:   details.CONSIGNMENT,
+    'Receiver Name': details['RECEIVER NAME'],
+    Postcode:      details.POSTCODE,
+    Mobile:        details['RECEIVER PHONE'],
+    // this will become the email body
+    message:       `To join the chat please click on this link: https://example.com/chat-session`,
+    _captcha:      'false'
   };
 
-  // 3) Add all your fields
-  addField('_subject',    'Live Chat Request');
-  addField('Consignment', details.CONSIGNMENT);
-  addField('ETA',         details.ETA);
-  addField('Receiver Name', details['RECEIVER NAME']);
-  addField('Postcode',    details.POSTCODE);
-  addField('Phone',       details['RECEIVER PHONE']);
-  addField('Time Window', details.TIME_WINDOW);
-  addField('_captcha',    'false');
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept':       'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
 
-  // 4) Insert & submit
-  document.body.appendChild(form);
-  form.submit();
+  if (!res.ok) {
+    console.error('Formsubmit error:', res.status, await res.text());
+    throw new Error('Email send failed');
+  }
 }
+
 
 
 
