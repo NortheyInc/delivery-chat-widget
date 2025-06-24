@@ -297,7 +297,6 @@
       true // typed slowly
     )
     .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
-    .then(() => addMessage("How may I assist you today?", "bot"))
     .then(() => setTimeout(showStep, 800));
   });
 })();
