@@ -161,9 +161,9 @@
     const STEPS = [
       {
         id: "topic",
-        text: "How may I assist you today? You can choose Track Consignment, Pickups, or type your question.",
-        type: "smartChoice",
-        choices: ["Track Consignment", "Pickups", "Other (Type your question)"]
+        text: "How may I assist you today?",
+        type: "choiceAndInput",
+        choices: ["Track Consignment", "Pickups"],
       },
       { id: "postcode", text: "Please enter the postcode that the delivery is going to:", type: "input", dependsOn: "Track Consignment" },
       { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
@@ -186,72 +186,65 @@
     STATE.inputPane.innerHTML = "";
     if (step.text) await addMessage(step.text, "bot", 800);
 
-    if (step.type === "smartChoice") {
-      const cdiv = document.createElement("div");
-      cdiv.className = "choice-container";
+    if (step.type === "choiceAndInput") {
+      // Show buttons and a text input simultaneously
+
+      const container = document.createElement("div");
+      container.className = "choice-container";
 
       step.choices.forEach(ch => {
         const btn = document.createElement("button");
         btn.className = "chat-btn";
         btn.textContent = ch;
         btn.onclick = async () => {
-          Array.from(cdiv.children).forEach(b => b.disabled = true);
+          // Disable buttons to avoid double clicks
+          Array.from(container.children).forEach(b => b.disabled = true);
           await addMessage(ch, "user");
-          cdiv.remove();
 
-          // Handle Pickups immediately with feature coming soon
           if (ch === "Pickups") {
             await addMessage("Feature coming soon.", "bot");
             STATE.inputPane.innerHTML = "";
-            STATE.idx = 0; // Restart conversation or you can choose to end here
+            STATE.idx = 0; // reset to start
             STATE.stepStarted = false;
             return showStep();
           }
 
-          if (ch === "Other (Type your question)") {
-            await addMessage("Please type your question below.", "bot");
-            STATE.answers.topic = "Other";
+          if (ch === "Track Consignment") {
+            STATE.answers.topic = ch;
+            STATE.idx++;
             STATE.inputPane.innerHTML = "";
-
-            const input = document.createElement("input");
-            input.className = "chat-text";
-            input.placeholder = "Type your question here…";
-
-            input.addEventListener("keypress", async e => {
-              if (e.key === "Enter" && input.value.trim()) {
-                input.disabled = true;
-                const val = input.value.trim();
-                await addMessage(val, "user");
-                // For now just respond politely and reset
-                await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
-                STATE.inputPane.innerHTML = "";
-                STATE.idx = 0;
-                STATE.stepStarted = false;
-                resetConversation();
-              }
-            });
-
-            STATE.inputPane.appendChild(input);
-            input.focus();
             STATE.stepStarted = false;
-            return;
+            return showStep();
           }
-
-          // Normal Track Consignment path
-          STATE.answers.topic = ch;
-          STATE.idx++;
-          STATE.stepStarted = false;
-          showStep();
         };
-        cdiv.appendChild(btn);
+        container.appendChild(btn);
       });
 
-      STATE.inputPane.appendChild(cdiv);
+      // Add free text input below buttons
+      const input = document.createElement("input");
+      input.className = "chat-text";
+      input.placeholder = "Or type your question here…";
+
+      input.addEventListener("keypress", async e => {
+        if (e.key === "Enter" && input.value.trim()) {
+          const val = input.value.trim();
+          input.disabled = true;
+          await addMessage(val, "user");
+          await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
+          STATE.inputPane.innerHTML = "";
+          STATE.idx = 0;
+          STATE.stepStarted = false;
+          resetConversation();
+        }
+      });
+
+      STATE.inputPane.append(container, input);
+      input.focus();
       STATE.stepStarted = false;
       return;
     }
 
-    // Input type steps
+    // Normal input steps
     const input = document.createElement("input");
     input.className = "chat-text";
     input.placeholder = "Enter here…";
@@ -293,7 +286,7 @@
           await addMessage(val, "user");
           await addMessage("Thank you. Your details have been matched in our system.", "bot");
           STATE.answers.consign = val;
-          STATE.idx = 3; // jump to phone input step
+          STATE.idx = 3; // jump to phone step
           STATE.inputPane.innerHTML = "";
           STATE.stepStarted = false;
           return showStep();
@@ -336,12 +329,11 @@
     resizeBody();
     window.addEventListener("resize", resizeBody);
 
-    // Initial welcome typed slowly
     addMessage(
       "Welcome to Direct Freight Express! This chat is monitored for accuracy and reporting purposes.",
       "bot",
       0,
-      true // typed slowly
+      true
     )
       .then(() => delay(1000))
       .then(() => showStep());
