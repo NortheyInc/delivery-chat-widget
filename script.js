@@ -132,10 +132,10 @@
       if (!q) return;
       await addMessage(input.value.trim(), "user");
       if (q.includes("when") && q.includes("deliver")) {
-        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.", "bot");
+        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
       } else if (q.includes("time")) {
         if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.", "bot");
+          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
         } else {
           await addMessage("Please check back after 8:30am on the ETA date.", "bot");
         }
