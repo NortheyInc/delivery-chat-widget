@@ -1,6 +1,6 @@
 (function () {
   const DELIVERY_DATA = [
-    { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4221", "RECEIVER PHONE": "0403642769", TIME_WINDOW: "11:30am and 1:30pm (time taken from COADS)" },
+    { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4211", "RECEIVER PHONE": "0403642769", TIME_WINDOW: "11:30am and 1:30pm (time taken from COADS)" },
     { CONSIGNMENT: "1111198765432", ETA: "24/06/2025", "RECEIVER NAME": "Catania", POSTCODE: "2142", "RECEIVER PHONE": "0297211111", TIME_WINDOW: "After 2:00pm (time taken from COADS)" },
     { CONSIGNMENT: "2222212345678", ETA: "25/06/2025", "RECEIVER NAME": "Cipolla", POSTCODE: "2028", "RECEIVER PHONE": "0492847511", TIME_WINDOW: "8:00am and 6:00pm" },
     { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404499999", TIME_WINDOW: "10:00am and 3:00pm" },
@@ -120,13 +120,6 @@
 
     STATE.inputPane.innerHTML = "";
 
-    const etaBtn = document.createElement("button");
-    etaBtn.className = "chat-btn";
-    etaBtn.textContent = "When will it be delivered?";
-    etaBtn.onclick = async () => {
-      await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
-    };
-
     const input = document.createElement("input");
     input.className = "chat-text";
     input.placeholder = "Type your question…";
@@ -139,10 +132,10 @@
       if (!q) return;
       await addMessage(input.value.trim(), "user");
       if (q.includes("when") && q.includes("deliver")) {
-        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
+        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.", "bot");
       } else if (q.includes("time")) {
         if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
+          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.", "bot");
         } else {
           await addMessage("Please check back after 8:30am on the ETA date.", "bot");
         }
@@ -153,7 +146,7 @@
     };
     input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
 
-    STATE.inputPane.append(etaBtn, input, send);
+    STATE.inputPane.append(input, send);
     input.focus();
   }
 
@@ -186,20 +179,14 @@
           Array.from(cdiv.children).forEach(b => b.disabled = true);
           await addMessage(ch, "user");
           STATE.answers.topic = ch;
-
-          // Remove buttons from chat body on click (fix)
           cdiv.remove();
-
           STATE.idx++;
           showStep();
         };
         cdiv.appendChild(btn);
       });
-
-      // Clear input pane and append buttons to chat body (fix)
       STATE.inputPane.innerHTML = "";
       STATE.body.appendChild(cdiv);
-
       return;
     }
 
@@ -239,7 +226,7 @@
           await addMessage("Details have been matched in our system.", "bot");
           await addMessage("For security purposes, please enter your phone number.", "bot");
           STATE.answers.consign = val;
-          STATE.idx = 3; // jump to phone step
+          STATE.idx = 3;
           STATE.inputPane.innerHTML = "";
           showStep();
           return;
