@@ -1,3 +1,49 @@
+// 1) Import the Firebase modules you need:
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  onChildAdded
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+// 2) Your Firebase config (from the console)
+const firebaseConfig = {
+  apiKey: "AIzaSyDJ5i6ObYSgCxL96skj6PRwxu0Yyy4cdjY",
+  authDomain: "dfe-chat.firebaseapp.com",
+  databaseURL: "https://dfe-chat-default-rtdb.firebaseio.com",
+  projectId: "dfe-chat",
+  storageBucket: "dfe-chat.firebasestorage.app",
+  messagingSenderId: "999150780957",
+  appId: "1:999150780957:web:d732755b98a99b542d7cf4",
+  measurementId: "G-VZX4MFXTK8"
+};
+
+// 3) Initialize Firebase & get a Database reference
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// 4) Session-ID: either reuse from ?session=… or create a new one
+let sessionId = new URLSearchParams(window.location.search).get("session");
+if (!sessionId) {
+  sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// 5) Helper: push every message into Firebase then render it locally
+async function sendAndStore(text, sender = "bot") {
+  await push(
+    ref(db, `chats/${sessionId}`),
+    { sender, text, ts: Date.now() }
+  );
+  addMessage(text, sender);
+}
+
+// 6) Listener: render any new messages from the DB in real time
+onChildAdded(ref(db, `chats/${sessionId}`), snapshot => {
+  const { sender, text } = snapshot.val();
+  addMessage(text, sender);
+});
+
 (function () {
   const DELIVERY_DATA = [
     { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4211", "RECEIVER PHONE": "0403642769", TIME_WINDOW: "Between 3:00pm and 5:00pm <time taken from COADS>" },

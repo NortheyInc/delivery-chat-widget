@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>DFE Chat Bot</title>
-  <link rel="stylesheet" href="styles.css">
-  <script defer src="script.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Load your chat logic as a module so it can import Firebase -->
+  <script type="module" src="script.js"></script>
 </head>
 <body>
   <div id="chat-widget">
     <div id="chat-header">
-      <div class="logo"></div> <!-- Use this if logo is set via CSS background -->
-      <!-- OR use <img> tag as you did below -->
-      <!-- <img src="logo.png" class="logo" alt="DFE Logo"> -->
+      <div class="logo"></div> <!-- Use CSS background-image, or swap to an <img> if you prefer -->
       <div id="chat-title">DFE Chat Bot</div>
     </div>
     <div id="chat-body"></div>
