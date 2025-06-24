@@ -65,7 +65,6 @@
       "bot"
     );
     await addMessage("Would you like to try again?", "bot");
-
     const container = document.createElement("div");
     container.className = "choice-container";
     ["Yes", "No"].forEach(label => {
@@ -92,8 +91,6 @@
   async function confirmIntent(intent) {
     STATE.inputPane.innerHTML = "";
     await addMessage(`Are you after ${intent}?`, "bot");
-
-    // Buttons **directly under question** bubble (top of input pane)
     const container = document.createElement("div");
     container.className = "choice-container";
     ["Yes", "No"].forEach(opt => {
@@ -114,77 +111,51 @@
       };
       container.appendChild(btn);
     });
-
-    // Place buttons at top (above input)
     STATE.inputPane.appendChild(container);
   }
 
   async function finalizeFlow() {
-  await addMessage("Thank you. We have matched your information.", "bot");
-  await addMessage("How may I assist you?", "bot");
+    await addMessage("Thank you. We have matched your information.", "bot");
+    await addMessage("How may I assist you?", "bot");
 
-  STATE.inputPane.innerHTML = "";
+    STATE.inputPane.innerHTML = "";
 
-  const input = document.createElement("input");
-  input.className = "chat-text";
-  input.placeholder = "Type your question…";
-
-  const send = document.createElement("button");
-  send.className = "chat-btn";
-  send.textContent = "Send";
-  send.onclick = async () => {
-    const q = input.value.trim().toLowerCase();
-    if (!q) return;
-    await addMessage(input.value.trim(), "user");
-
-    if (/real ?person|live ?agent|customer service|speak to someone/.test(q)) {
-      STATE.inputPane.innerHTML = "";
-      const liveChatContainer = document.createElement("div");
-      liveChatContainer.className = "choice-container";
-      await addMessage("Do you wish to chat with a customer service member?", "bot");
-
-      ["Yes", "No"].forEach(label => {
-        const btn = document.createElement("button");
-        btn.className = "chat-btn";
-        btn.textContent = label;
-        btn.onclick = async () => {
-          liveChatContainer.innerHTML = "";
-          await addMessage(label, "user");
-          if (label === "Yes") {
-            await addMessage("Connecting you to a customer service member now...", "bot");
-            // Add live chat handoff here
-          } else {
-            await addMessage("Alright, how else can I assist you?", "bot");
-            STATE.idx = 0;
-            showStep();
-          }
-        };
-        liveChatContainer.appendChild(btn);
-      });
-      STATE.inputPane.appendChild(liveChatContainer);
-      return;
-    }
-
-    if (q.includes("when") && q.includes("deliver")) {
+    const etaBtn = document.createElement("button");
+    etaBtn.className = "chat-btn";
+    etaBtn.textContent = "When will it be delivered?";
+    etaBtn.onclick = async () => {
       await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
-    } else if (q.includes("time")) {
-      if (isToday(STATE.consignmentMatch.ETA)) {
-        await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
+    };
+
+    const input = document.createElement("input");
+    input.className = "chat-text";
+    input.placeholder = "Type your question…";
+
+    const send = document.createElement("button");
+    send.className = "chat-btn";
+    send.textContent = "Send";
+    send.onclick = async () => {
+      const q = input.value.trim().toLowerCase();
+      if (!q) return;
+      await addMessage(input.value.trim(), "user");
+      if (q.includes("when") && q.includes("deliver")) {
+        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
+      } else if (q.includes("time")) {
+        if (isToday(STATE.consignmentMatch.ETA)) {
+          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
+        } else {
+          await addMessage("Please check back after 8:30am on the ETA date.", "bot");
+        }
       } else {
-        await addMessage("Please check back after 8:30am on the ETA date.", "bot");
+        await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
       }
-    } else {
-      await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
-    }
-    input.value = "";
-  };
-  input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
+      input.value = "";
+    };
+    input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
 
-  // ONLY input and send button — no quick buttons here
-  STATE.inputPane.append(input, send);
-  input.focus();
-}
-
+    STATE.inputPane.append(etaBtn, input, send);
+    input.focus();
+  }
 
   async function showStep() {
     const STEPS = [
@@ -215,46 +186,26 @@
           Array.from(cdiv.children).forEach(b => b.disabled = true);
           await addMessage(ch, "user");
           STATE.answers.topic = ch;
+
+          // Remove buttons from chat body on click (fix)
+          cdiv.remove();
+
           STATE.idx++;
           showStep();
         };
         cdiv.appendChild(btn);
       });
 
-      const wrap = document.createElement("div");
-      wrap.className = "wrap";
-      const txt = document.createElement("input");
-      txt.className = "chat-text";
-      txt.placeholder = "Or ask…";
-      const sendBtn = document.createElement("button");
-      sendBtn.className = "chat-btn";
-      sendBtn.textContent = "Send";
+      // Clear input pane and append buttons to chat body (fix)
+      STATE.inputPane.innerHTML = "";
+      STATE.body.appendChild(cdiv);
 
-      sendBtn.onclick = async () => {
-        const u = txt.value.trim();
-        if (!u) return;
-        Array.from(cdiv.children).forEach(b => b.disabled = true);
-        txt.disabled = true;
-        await addMessage(u, "user");
-        const intent = matchIntent(u);
-        if (intent) await confirmIntent(intent);
-        else await addMessage("Sorry, I didn’t understand. Can you rephrase?", "bot");
-      };
-
-      txt.addEventListener("keypress", e => {
-        if (e.key === "Enter") sendBtn.click();
-      });
-
-      wrap.append(txt, sendBtn);
-      STATE.inputPane.append(cdiv, wrap);
-      txt.focus();
       return;
     }
 
     const input = document.createElement("input");
     input.className = "chat-text";
     input.placeholder = "Enter here…";
-
     input.addEventListener("keypress", async e => {
       if (e.key === "Enter" && input.value.trim()) {
         input.disabled = true;
@@ -294,30 +245,16 @@
           return;
         }
 
-        if (step.id === "phone") {
-          if (!/^0[23478]\d{8}$/.test(val)) {
-            const em = document.createElement("div");
-            em.className = "error";
-            em.textContent = "Phone must be 10 digits, start 02/03/04/07/08.";
-            STATE.inputPane.appendChild(em);
-            // Stop here if invalid phone
-            return;
-          }
-          if (STATE.consignmentMatch && normalizePhone(val) !== normalizePhone(STATE.consignmentMatch["RECEIVER PHONE"])) {
-            await addMessage("Unable to verify phone number.", "bot");
-            return; // stop further steps
-          }
-          STATE.answers.phone = val;
+        if (step.id === "phone" && !/^0[23478]\d{8}$/.test(val)) {
+          const em = document.createElement("div");
+          em.className = "error";
+          em.textContent = "Phone must be 10 digits, start 02/03/04/07/08.";
+          STATE.inputPane.appendChild(em);
+          input.disabled = false;
+          return;
         }
 
-        if (step.id === "surname") {
-          if (STATE.consignmentMatch && normalize(val) !== normalize(STATE.consignmentMatch["RECEIVER NAME"])) {
-            await addMessage("Unable to verify surname.", "bot");
-            return; // stop further steps
-          }
-          STATE.answers.surname = val;
-        }
-
+        STATE.answers[step.id] = val;
         await addMessage(val, "user");
         STATE.idx++;
         showStep();
