@@ -28,22 +28,36 @@
   };
 
 async function sendEmailNotification(details) {
-  const formData = new FormData();
-  formData.append('_subject', 'Live Chat Request');
-  formData.append('Consignment', details.CONSIGNMENT);
-  formData.append('ETA', details.ETA);
-  formData.append('Receiver Name', details['RECEIVER NAME']);
-  formData.append('Postcode', details.POSTCODE);
-  formData.append('Phone', details['RECEIVER PHONE']);
-  formData.append('Time Window', details.TIME_WINDOW);
-  // disable captcha on Formsubmit side (optional)
-  formData.append('_captcha', 'false');
+  // 1) Create a <form> element
+  const form = document.createElement('form');
+  form.action = 'https://formsubmit.co/peterno@directfreight.com.au';
+  form.method = 'POST';
+  form.style.display = 'none';
 
-  await fetch('https://formsubmit.co/peterno@directfreight.com.au', {
-    method: 'POST',
-    body: formData
-  });
+  // 2) Helper to append <input name=… value=…>
+  const addField = (name, value) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = name;
+    inp.value = value;
+    form.appendChild(inp);
+  };
+
+  // 3) Add all your fields
+  addField('_subject',    'Live Chat Request');
+  addField('Consignment', details.CONSIGNMENT);
+  addField('ETA',         details.ETA);
+  addField('Receiver Name', details['RECEIVER NAME']);
+  addField('Postcode',    details.POSTCODE);
+  addField('Phone',       details['RECEIVER PHONE']);
+  addField('Time Window', details.TIME_WINDOW);
+  addField('_captcha',    'false');
+
+  // 4) Insert & submit
+  document.body.appendChild(form);
+  form.submit();
 }
+
 
 
   function addMessage(text, sender = "bot", baseDelay = 1200, typeSlow = false) {
@@ -140,12 +154,12 @@ async function finalizeFlow() {
     ];
     const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
 
+// inside finalizeFlow(), after you detect wantsLiveChat:
 if (wantsLiveChat) {
   const details = STATE.consignmentMatch;
 
-  // 1) Ask for confirmation
   await addMessage(
-    "You’ve requested a live customer-service rep. Please press the button below to confirm.",
+    "You have requested to speak with a live customer service representative. Please press the button below to confirm.",
     "bot"
   );
 
@@ -155,26 +169,27 @@ if (wantsLiveChat) {
   STATE.inputPane.innerHTML = "";
   STATE.inputPane.appendChild(connectBtn);
 
-  // 2) When they click, fire the Formsubmit email
   connectBtn.onclick = async () => {
+    // 1) echo the user’s click
     await addMessage("Connect me to a team member", "user");
 
-    // ← This sends the POST to Formsubmit.co with your details
+    // 2) send the Formsubmit email
     await sendEmailNotification(details);
 
-    // 3) Confirm to the user
-    await addMessage(
-      "Thank you! We’ve notified our team and someone will join shortly. 😊",
-      "bot"
-    );
+    // 3) short pause before saying you’re connecting
+    await delay(800 + Math.random() * 400);
+    await addMessage("Connecting with customer service team now", "bot");
 
-    // 4) Clear the input pane
+    // 4) longer pause before announcing wait time
+    await delay(2000 + Math.random() * 1000);
+    await addMessage("The wait time is currently 4 minutes. Thank you.", "bot");
+
+    // 5) clear the input pane
     STATE.inputPane.innerHTML = "";
   };
 
   return;
 }
-
 
     // Check if user says "Yes" (or similar) to "anything else I can assist you with?"
     const positiveReplies = ["yes", "surecan", "yesplease", "yeah", "yep", "yup"];
