@@ -6,14 +6,6 @@
     { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404499999", TIME_WINDOW: "10:00am and 3:00pm" },
   ];
 
-  const STEPS = [
-    { id: "topic",    text: "Hello! How may I assist you today?",                                type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
-    { id: "postcode", text: "Please enter the postcode that the delivery is going to:",          type: "input",       dependsOn: "Track Consignment" },
-    { id: "consign",  text: "Please enter the Consignment Number:",                             type: "input",       dependsOn: "Track Consignment" },
-    { id: "phone",    text: "",                                                                   type: "input",       dependsOn: "Track Consignment" },
-    { id: "surname",  text: "Please enter your Surname:",                                       type: "input",       dependsOn: "Track Consignment" },
-  ];
-
   const STATE = {
     answers: {},
     idx: 0,
@@ -22,18 +14,26 @@
     consignmentMatch: null,
   };
 
-  const normalize      = s => (s||"").toLowerCase().replace(/\s+/g,"").trim();
-  const normalizePhone = s => (s||"").replace(/\D/g,"");
+  const normalize = str => (str || "").toLowerCase().replace(/\s+/g, "").trim();
+  const normalizePhone = str => (str || "").replace(/\D/g, "");
   const scrollToBottom = () => { STATE.body.scrollTop = STATE.body.scrollHeight; };
-  const isToday        = etaStr => {
-    const [d,m,y] = etaStr.split("/").map(Number);
-    const eta = new Date(y, m-1, d);
+
+  const isToday = etaStr => {
+    const [d, m, y] = etaStr.split("/").map(Number);
+    const eta = new Date(y, m - 1, d);
     return eta.toDateString() === new Date().toDateString();
   };
 
-  function addMessage(text, sender="bot", baseDelay=1200) {
+  const matchIntent = text => {
+    const input = normalize(text);
+    if (/track|delivery|where|when|order|carton|consignment/.test(input)) return "Track Consignment";
+    if (/pickup|collect/.test(input)) return "Pickups";
+    return null;
+  };
+
+  function addMessage(text, sender = "bot", baseDelay = 1200) {
     return new Promise(resolve => {
-      const delay = baseDelay + Math.random()*1200;
+      const delay = baseDelay + Math.random() * 800;
       setTimeout(() => {
         const msg = document.createElement("div");
         msg.className = `msg ${sender}`;
@@ -41,7 +41,7 @@
         avatar.className = `avatar ${sender}`;
         const bubble = document.createElement("div");
         bubble.className = "bubble";
-        bubble.textContent = text;
+        bubble.innerHTML = text;
         msg.append(avatar, bubble);
         STATE.body.appendChild(msg);
         scrollToBottom();
@@ -61,22 +61,20 @@
   async function askTryAgain() {
     STATE.inputPane.innerHTML = "";
     await addMessage(
-      "Details entered do not match. Please try again or for Tracking of a consignment, please go to " +
-      "<a href=\"https://www.directfreight.com.au/ConsignmentStatus.aspx\" target=\"_blank\">" +
-      "https://www.directfreight.com.au/ConsignmentStatus.aspx</a>",
+      `Details entered do not match. Please try again or for Tracking of a consignment, please go to <a href="https://www.directfreight.com.au/ConsignmentStatus.aspx" target="_blank">https://www.directfreight.com.au/ConsignmentStatus.aspx</a>`,
       "bot"
     );
     await addMessage("Would you like to try again?", "bot");
     const container = document.createElement("div");
     container.className = "choice-container";
-    ["Yes","No"].forEach(label => {
+    ["Yes", "No"].forEach(label => {
       const btn = document.createElement("button");
       btn.className = "chat-btn";
       btn.textContent = label;
       btn.onclick = async () => {
         container.innerHTML = "";
         await addMessage(label, "user");
-        if (label==="Yes") {
+        if (label === "Yes") {
           STATE.answers = {};
           STATE.idx = 1;
           showStep();
@@ -95,14 +93,14 @@
     await addMessage(`Are you after ${intent}?`, "bot");
     const container = document.createElement("div");
     container.className = "choice-container";
-    ["Yes","No"].forEach(opt => {
+    ["Yes", "No"].forEach(opt => {
       const btn = document.createElement("button");
       btn.className = "chat-btn";
       btn.textContent = opt;
       btn.onclick = async () => {
         container.innerHTML = "";
         await addMessage(opt, "user");
-        if (opt==="Yes") {
+        if (opt === "Yes") {
           STATE.answers.topic = intent;
           STATE.idx++;
           showStep();
@@ -142,28 +140,37 @@
       if (q.includes("when") && q.includes("deliver")) {
         await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
       } else if (q.includes("time")) {
-        await addMessage(
-          `Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`,
-          "bot"
-        );
+        if (isToday(STATE.consignmentMatch.ETA)) {
+          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
+        } else {
+          await addMessage("Please check back after 8:30am on the ETA date.", "bot");
+        }
       } else {
         await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
       }
       input.value = "";
     };
-    input.addEventListener("keypress", e => { if (e.key==="Enter") send.click(); });
+    input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
 
     STATE.inputPane.append(etaBtn, input, send);
     input.focus();
   }
 
   async function showStep() {
+    const STEPS = [
+      { id: "topic", text: "Hello! How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
+      { id: "postcode", text: "Please enter the postcode that the delivery is going to:", type: "input", dependsOn: "Track Consignment" },
+      { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
+      { id: "phone", text: "", type: "input", dependsOn: "Track Consignment" },
+      { id: "surname", text: "Please enter your Surname:", type: "input", dependsOn: "Track Consignment" },
+    ];
     if (STATE.idx >= STEPS.length) return finalizeFlow();
     const step = STEPS[STATE.idx];
     if (step.dependsOn && STATE.answers.topic !== step.dependsOn) {
       STATE.idx++;
       return showStep();
     }
+
     STATE.inputPane.innerHTML = "";
     if (step.text) await addMessage(step.text, "bot", 0);
 
@@ -199,9 +206,7 @@
         Array.from(cdiv.children).forEach(b => b.disabled = true);
         txt.disabled = true;
         await addMessage(u, "user");
-        const intent = normalize(u).includes("track") ? "Track Consignment"
-                     : normalize(u).includes("pickup") ? "Pickups"
-                     : null;
+        const intent = matchIntent(u);
         if (intent) await confirmIntent(intent);
         else await addMessage("Sorry, I didn’t understand. Can you rephrase?", "bot");
       };
@@ -216,26 +221,24 @@
       return;
     }
 
-    // input steps
     const input = document.createElement("input");
     input.className = "chat-text";
     input.placeholder = "Enter here…";
     input.addEventListener("keypress", async e => {
-      if (e.key==="Enter" && input.value.trim()) {
+      if (e.key === "Enter" && input.value.trim()) {
         input.disabled = true;
         const val = input.value.trim();
-        if (step.id==="postcode") {
-          if (!/^\d{4}$/.test(val)) {
-            const em = document.createElement("div");
-            em.className = "error";
-            em.textContent = "Postcode must be 4 digits.";
-            STATE.inputPane.appendChild(em);
-            input.disabled = false;
-            return;
-          }
-          STATE.answers.postcode = val;
+
+        if (step.id === "postcode" && !/^\d{4}$/.test(val)) {
+          const em = document.createElement("div");
+          em.className = "error";
+          em.textContent = "Postcode must be 4 digits.";
+          STATE.inputPane.appendChild(em);
+          input.disabled = false;
+          return;
         }
-        if (step.id==="consign") {
+
+        if (step.id === "consign") {
           if (!/^\d{13}$/.test(val)) {
             const em = document.createElement("div");
             em.className = "error";
@@ -254,25 +257,22 @@
           await addMessage("Details have been matched in our system.", "bot");
           await addMessage("For security purposes, please enter your phone number.", "bot");
           STATE.answers.consign = val;
-          STATE.idx = STEPS.findIndex(s => s.id==="phone");
+          STATE.idx = 3; // jump to phone step
           STATE.inputPane.innerHTML = "";
           showStep();
           return;
         }
-        if (step.id==="phone") {
-          if (!/^0[23478]\d{8}$/.test(val)) {
-            const em = document.createElement("div");
-            em.className = "error";
-            em.textContent = "Phone must be 10 digits, start 02/03/04/07/08.";
-            STATE.inputPane.appendChild(em);
-            input.disabled = false;
-            return;
-          }
-          STATE.answers.phone = val;
+
+        if (step.id === "phone" && !/^0[23478]\d{8}$/.test(val)) {
+          const em = document.createElement("div");
+          em.className = "error";
+          em.textContent = "Phone must be 10 digits, start 02/03/04/07/08.";
+          STATE.inputPane.appendChild(em);
+          input.disabled = false;
+          return;
         }
-        if (step.id==="surname") {
-          STATE.answers.surname = val;
-        }
+
+        STATE.answers[step.id] = val;
         await addMessage(val, "user");
         STATE.idx++;
         showStep();
@@ -288,17 +288,17 @@
     function resizeBody() {
       const widget = document.getElementById("chat-widget");
       const header = document.getElementById("chat-header");
-      const input  = document.getElementById("chat-input");
+      const input = document.getElementById("chat-input");
       STATE.body.style.height = (widget.clientHeight - header.offsetHeight - input.offsetHeight) + "px";
       STATE.body.style.overflowY = "auto";
     }
     resizeBody();
     window.addEventListener("resize", resizeBody);
-
     addMessage(
       "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes.",
       "bot",
       0
-    ).then(() => setTimeout(showStep, 1000));
+    ).then(() => setTimeout(showStep, 800));
   });
 })();
+
