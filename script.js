@@ -1,9 +1,9 @@
 (function () {
   const DELIVERY_DATA = [
-    { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4211", "RECEIVER PHONE": "0403642769", TIME_WINDOW: "11:30am and 1:30pm (time taken from COADS)" },
-    { CONSIGNMENT: "1111198765432", ETA: "24/06/2025", "RECEIVER NAME": "Catania", POSTCODE: "2142", "RECEIVER PHONE": "0297211111", TIME_WINDOW: "After 2:00pm (time taken from COADS)" },
-    { CONSIGNMENT: "2222212345678", ETA: "25/06/2025", "RECEIVER NAME": "Cipolla", POSTCODE: "2028", "RECEIVER PHONE": "0492847511", TIME_WINDOW: "8:00am and 6:00pm" },
-    { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404499999", TIME_WINDOW: "10:00am and 3:00pm" },
+    { CONSIGNMENT: "9999912345678", ETA: "24/06/2025", "RECEIVER NAME": "Northey", POSTCODE: "4211", "RECEIVER PHONE": "0403642769", TIME_WINDOW: "Between 3:00pm and 5:00pm <time taken from COADS>" },
+    { CONSIGNMENT: "1111198765432", ETA: "24/06/2025", "RECEIVER NAME": "Catania", POSTCODE: "2142", "RECEIVER PHONE": "0297211111", TIME_WINDOW: "After 3:00pm <time taken from COADS>" },
+    { CONSIGNMENT: "2222212345678", ETA: "25/06/2025", "RECEIVER NAME": "Cipolla", POSTCODE: "2028", "RECEIVER PHONE": "0492847511", TIME_WINDOW: "Between 10:00am and 12:00pm" },
+    { CONSIGNMENT: "6666698765432", ETA: "26/06/2025", "RECEIVER NAME": "Smith", POSTCODE: "2000", "RECEIVER PHONE": "0404499999", TIME_WINDOW: "Between 1:00pm and 3:00pm" },
   ];
 
   const STATE = {
@@ -17,7 +17,6 @@
   const normalize = str => (str || "").toLowerCase().replace(/\s+/g, "").trim();
   const normalizePhone = str => (str || "").replace(/\D/g, "");
   const scrollToBottom = () => { STATE.body.scrollTop = STATE.body.scrollHeight; };
-
   const isToday = etaStr => {
     const [d, m, y] = etaStr.split("/").map(Number);
     const eta = new Date(y, m - 1, d);
@@ -31,7 +30,7 @@
     return new Promise(resolve => setTimeout(resolve, 1000));
   };
 
-  function addMessage(text, sender = "bot", baseDelay = 1200) {
+  function addMessage(text, sender = "bot", baseDelay = 1200, typeSlow = false) {
     return new Promise(resolve => {
       const delay = baseDelay + Math.random() * 800;
       setTimeout(() => {
@@ -41,11 +40,24 @@
         avatar.className = `avatar ${sender}`;
         const bubble = document.createElement("div");
         bubble.className = "bubble";
-        bubble.innerHTML = text;
         msg.append(avatar, bubble);
         STATE.body.appendChild(msg);
         scrollToBottom();
-        resolve();
+
+        if (typeSlow && sender === "bot") {
+          let i = 0;
+          const interval = setInterval(() => {
+            bubble.innerHTML += text[i++];
+            scrollToBottom();
+            if (i >= text.length) {
+              clearInterval(interval);
+              resolve();
+            }
+          }, 30);
+        } else {
+          bubble.innerHTML = text;
+          resolve();
+        }
       }, delay);
     });
   }
@@ -60,10 +72,7 @@
 
   async function askTryAgain() {
     STATE.inputPane.innerHTML = "";
-    await addMessage(
-      `I'm sorry, but the details you entered do not match our records. Please try again or for tracking a consignment, please visit <a href="https://www.directfreight.com.au/ConsignmentStatus.aspx" target="_blank" rel="noopener">Direct Freight Consignment Status</a>. Thank you for your understanding.`,
-      "bot"
-    );
+    await addMessage(`I'm sorry, but the details you entered do not match our records. Please try again or for tracking a consignment, please visit <a href="https://www.directfreight.com.au/ConsignmentStatus.aspx" target="_blank" rel="noopener">Direct Freight Consignment Status</a>. Thank you for your understanding.`, "bot");
     await addMessage("Would you like to try again?", "bot");
     const container = document.createElement("div");
     container.className = "choice-container";
@@ -120,11 +129,9 @@
     await addMessage("Is there anything else I can assist you with?", "bot");
 
     STATE.inputPane.innerHTML = "";
-
     const input = document.createElement("input");
     input.className = "chat-text";
     input.placeholder = "Type your question…";
-
     const send = document.createElement("button");
     send.className = "chat-btn";
     send.textContent = "Send";
@@ -137,10 +144,7 @@
 
       if (["realperson", "speakwithsomeone"].includes(q)) {
         await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
-        await sendEmailNotification(
-          "Live Chat Request",
-          `User requested a real person/live chat. Consignment: ${STATE.consignmentMatch?.CONSIGNMENT || "N/A"}`
-        );
+        await sendEmailNotification("Live Chat Request", `User requested a real person/live chat. Consignment: ${STATE.consignmentMatch?.CONSIGNMENT || "N/A"}`);
         STATE.inputPane.innerHTML = "";
         return;
       }
@@ -167,14 +171,13 @@
     };
 
     input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
-
     STATE.inputPane.append(input, send);
     input.focus();
   }
 
   async function showStep() {
     const STEPS = [
-      { id: "topic", text: "Hello! How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
+      { id: "topic", text: "How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
       { id: "postcode", text: "Please enter the postcode that the delivery is going to:", type: "input", dependsOn: "Track Consignment" },
       { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
       { id: "phone", text: "", type: "input", dependsOn: "Track Consignment" },
@@ -189,7 +192,6 @@
 
     STATE.inputPane.innerHTML = "";
     if (step.text) await addMessage(step.text, "bot", 0);
-
     if (step.type === "smartChoice") {
       const cdiv = document.createElement("div");
       cdiv.className = "choice-container";
@@ -288,9 +290,14 @@
     resizeBody();
     window.addEventListener("resize", resizeBody);
 
-    // ✅ Split opening message into multiple parts
-    addMessage("Welcome to Direct Freight Express.", "bot", 0)
-      .then(() => addMessage("This chat is monitored for accuracy and reporting purposes.", "bot"))
-      .then(() => setTimeout(showStep, 800));
+    addMessage(
+      "Welcome to Direct Freight Express — this chat is monitored for accuracy and reporting purposes.",
+      "bot",
+      0,
+      true // typed slowly
+    )
+    .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
+    .then(() => addMessage("How may I assist you today?", "bot"))
+    .then(() => setTimeout(showStep, 800));
   });
 })();
