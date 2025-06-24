@@ -120,85 +120,71 @@
   }
 
   async function finalizeFlow() {
-    await addMessage("Thank you. We have matched your information.", "bot");
-    await addMessage("How may I assist you?", "bot");
+  await addMessage("Thank you. We have matched your information.", "bot");
+  await addMessage("How may I assist you?", "bot");
 
-    STATE.inputPane.innerHTML = "";
+  STATE.inputPane.innerHTML = "";
 
-    // Quick buttons under question bubble, above input
-    const quickBtnContainer = document.createElement("div");
-    quickBtnContainer.className = "choice-container";
+  const input = document.createElement("input");
+  input.className = "chat-text";
+  input.placeholder = "Type your question…";
 
-    const etaBtn = document.createElement("button");
-    etaBtn.className = "chat-btn";
-    etaBtn.textContent = "When will it be delivered?";
-    etaBtn.onclick = async () => {
+  const send = document.createElement("button");
+  send.className = "chat-btn";
+  send.textContent = "Send";
+  send.onclick = async () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) return;
+    await addMessage(input.value.trim(), "user");
+
+    if (/real ?person|live ?agent|customer service|speak to someone/.test(q)) {
+      STATE.inputPane.innerHTML = "";
+      const liveChatContainer = document.createElement("div");
+      liveChatContainer.className = "choice-container";
+      await addMessage("Do you wish to chat with a customer service member?", "bot");
+
+      ["Yes", "No"].forEach(label => {
+        const btn = document.createElement("button");
+        btn.className = "chat-btn";
+        btn.textContent = label;
+        btn.onclick = async () => {
+          liveChatContainer.innerHTML = "";
+          await addMessage(label, "user");
+          if (label === "Yes") {
+            await addMessage("Connecting you to a customer service member now...", "bot");
+            // Add live chat handoff here
+          } else {
+            await addMessage("Alright, how else can I assist you?", "bot");
+            STATE.idx = 0;
+            showStep();
+          }
+        };
+        liveChatContainer.appendChild(btn);
+      });
+      STATE.inputPane.appendChild(liveChatContainer);
+      return;
+    }
+
+    if (q.includes("when") && q.includes("deliver")) {
       await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
-    };
-    quickBtnContainer.appendChild(etaBtn);
-
-    STATE.inputPane.appendChild(quickBtnContainer);
-
-    const input = document.createElement("input");
-    input.className = "chat-text";
-    input.placeholder = "Type your question…";
-
-    const send = document.createElement("button");
-    send.className = "chat-btn";
-    send.textContent = "Send";
-    send.onclick = async () => {
-      const q = input.value.trim().toLowerCase();
-      if (!q) return;
-      await addMessage(input.value.trim(), "user");
-
-      if (/real ?person|live ?agent|customer service|speak to someone/.test(q)) {
-        // Ask if want live chat
-        STATE.inputPane.innerHTML = "";
-        const liveChatContainer = document.createElement("div");
-        liveChatContainer.className = "choice-container";
-        await addMessage("Do you wish to chat with a customer service member?", "bot");
-
-        ["Yes", "No"].forEach(label => {
-          const btn = document.createElement("button");
-          btn.className = "chat-btn";
-          btn.textContent = label;
-          btn.onclick = async () => {
-            liveChatContainer.innerHTML = "";
-            await addMessage(label, "user");
-            if (label === "Yes") {
-              await addMessage("Connecting you to a customer service member now...", "bot");
-              // Here you could trigger live chat handoff logic
-            } else {
-              await addMessage("Alright, how else can I assist you?", "bot");
-              STATE.idx = 0; // Restart conversation or handle as needed
-              showStep();
-            }
-          };
-          liveChatContainer.appendChild(btn);
-        });
-        STATE.inputPane.appendChild(liveChatContainer);
-        return;
-      }
-
-      if (q.includes("when") && q.includes("deliver")) {
-        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
-      } else if (q.includes("time")) {
-        if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
-        } else {
-          await addMessage("Please check back after 8:30am on the ETA date.", "bot");
-        }
+    } else if (q.includes("time")) {
+      if (isToday(STATE.consignmentMatch.ETA)) {
+        await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
       } else {
-        await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
+        await addMessage("Please check back after 8:30am on the ETA date.", "bot");
       }
-      input.value = "";
-    };
-    input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
+    } else {
+      await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
+    }
+    input.value = "";
+  };
+  input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
 
-    // Input and send button under quick buttons
-    STATE.inputPane.append(input, send);
-    input.focus();
-  }
+  // ONLY input and send button — no quick buttons here
+  STATE.inputPane.append(input, send);
+  input.focus();
+}
+
 
   async function showStep() {
     const STEPS = [
