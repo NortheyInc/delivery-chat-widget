@@ -140,33 +140,41 @@ async function finalizeFlow() {
     ];
     const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
 
-    if (wantsLiveChat) {
-      const details = STATE.consignmentMatch ? 
-        `Consignment: ${STATE.consignmentMatch.CONSIGNMENT}\n` +
-        `ETA: ${STATE.consignmentMatch.ETA}\n` +
-        `Receiver Name: ${STATE.consignmentMatch["RECEIVER NAME"]}\n` +
-        `Postcode: ${STATE.consignmentMatch.POSTCODE}\n` +
-        `Phone: ${STATE.consignmentMatch["RECEIVER PHONE"]}\n` +
-        `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}`
-        : "No consignment matched.";
+if (wantsLiveChat) {
+  const details = STATE.consignmentMatch;
 
-      await addMessage("You have requested to speak with a live customer service representative. Please press the button below to confirm. Thank you for your patience.", "bot");
-      await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
+  // 1) Ask for confirmation
+  await addMessage(
+    "You’ve requested a live customer-service rep. Please press the button below to confirm.",
+    "bot"
+  );
 
-      const connectBtn = document.createElement("button");
-      connectBtn.className = "chat-btn";
-      connectBtn.textContent = "Connect me to a team member";
-      STATE.inputPane.innerHTML = "";
-      STATE.inputPane.appendChild(connectBtn);
+  const connectBtn = document.createElement("button");
+  connectBtn.className = "chat-btn";
+  connectBtn.textContent = "Connect me to a team member";
+  STATE.inputPane.innerHTML = "";
+  STATE.inputPane.appendChild(connectBtn);
 
-      connectBtn.onclick = async () => {
-        await addMessage("Connect me to a team member", "user");
-        await addMessage("A team member will join the chat shortly.", "bot");
-        STATE.inputPane.innerHTML = "";
-      };
+  // 2) When they click, fire the Formsubmit email
+  connectBtn.onclick = async () => {
+    await addMessage("Connect me to a team member", "user");
 
-      return;
-    }
+    // ← This sends the POST to Formsubmit.co with your details
+    await sendEmailNotification(details);
+
+    // 3) Confirm to the user
+    await addMessage(
+      "Thank you! We’ve notified our team and someone will join shortly. 😊",
+      "bot"
+    );
+
+    // 4) Clear the input pane
+    STATE.inputPane.innerHTML = "";
+  };
+
+  return;
+}
+
 
     // Check if user says "Yes" (or similar) to "anything else I can assist you with?"
     const positiveReplies = ["yes", "surecan", "yesplease", "yeah", "yep", "yup"];
