@@ -141,33 +141,45 @@ async function finalizeFlow() {
     ];
     const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
 
-    if (wantsLiveChat) {
-      const details = STATE.consignmentMatch ? 
-        `Consignment: ${STATE.consignmentMatch.CONSIGNMENT}\n` +
-        `ETA: ${STATE.consignmentMatch.ETA}\n` +
-        `Receiver Name: ${STATE.consignmentMatch["RECEIVER NAME"]}\n` +
-        `Postcode: ${STATE.consignmentMatch.POSTCODE}\n` +
-        `Phone: ${STATE.consignmentMatch["RECEIVER PHONE"]}\n` +
-        `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}`
-        : "No consignment matched.";
+if (wantsLiveChat) {
+  const requiredFields = ["postcode", "consign", "phone", "surname"];
+  const hasAllDetails = requiredFields.every(k => STATE.answers[k]);
 
-      await addMessage("No problem. Please click the button below to be connected.", "bot");
-      await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
+  if (!hasAllDetails) {
+    await addMessage("Before we can connect you to a real person, we need to confirm your details.", "bot");
+    await addMessage("Please complete the verification steps first.", "bot");
+    input.value = "";
+    input.focus();
+    return;
+  }
 
-      const connectBtn = document.createElement("button");
-      connectBtn.className = "chat-btn";
-      connectBtn.textContent = "Connect me to a team member";
-      STATE.inputPane.innerHTML = "";
-      STATE.inputPane.appendChild(connectBtn);
+  const details = STATE.consignmentMatch ? 
+    `Consignment: ${STATE.consignmentMatch.CONSIGNMENT}\n` +
+    `ETA: ${STATE.consignmentMatch.ETA}\n` +
+    `Receiver Name: ${STATE.consignmentMatch["RECEIVER NAME"]}\n` +
+    `Postcode: ${STATE.consignmentMatch.POSTCODE}\n` +
+    `Phone: ${STATE.consignmentMatch["RECEIVER PHONE"]}\n` +
+    `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}` :
+    "No consignment matched.";
 
-      connectBtn.onclick = async () => {
-        await addMessage("Connect me to a team member", "user");
-        await addMessage("A team member will join the chat shortly.", "bot");
-        STATE.inputPane.innerHTML = "";
-      };
+  await addMessage("No problem. Please click the button below to be connected.", "bot");
+  await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
 
-      return;
-    }
+  const connectBtn = document.createElement("button");
+  connectBtn.className = "chat-btn";
+  connectBtn.textContent = "Connect me to a team member";
+  STATE.inputPane.innerHTML = "";
+  STATE.inputPane.appendChild(connectBtn);
+
+  connectBtn.onclick = async () => {
+    await addMessage("Connect me to a team member", "user");
+    await addMessage("A team member will join the chat shortly.", "bot");
+    STATE.inputPane.innerHTML = "";
+  };
+
+  return;
+}
+
 
     // Check if user says "Yes" (or similar) to "anything else I can assist you with?"
     const positiveReplies = ["yes", "surecan", "yesplease", "yeah", "yep", "yup"];
