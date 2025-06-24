@@ -139,7 +139,7 @@ async function finalizeFlow() {
         `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}`
         : "No consignment matched.";
 
-      await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
+      await addMessage("You have requested to speak with a live customer service representative. Please press the button below to confirm. Thank you for your patience.", "bot");
       await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
 
       const connectBtn = document.createElement("button");
