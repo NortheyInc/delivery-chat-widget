@@ -102,57 +102,89 @@
     STATE.inputPane.appendChild(container);
   }
 
-  async function finalizeFlow() {
-    await addMessage("Thank you. We have matched your information.", "bot");
-    await addMessage(`Your delivery is scheduled for ${STATE.consignmentMatch.ETA}.`, "bot");
-    await addMessage("Is there anything else I can assist you with?", "bot");
+ async function finalizeFlow() {
+  await addMessage("Thank you. We have matched your information.", "bot");
+  await addMessage(`Your delivery is scheduled for ${STATE.consignmentMatch.ETA}.`, "bot");
+  await addMessage("Is there anything else I can assist you with?", "bot");
 
-    STATE.inputPane.innerHTML = "";
-    const input = document.createElement("input");
-    input.className = "chat-text";
-    input.placeholder = "Type your question…";
-    const send = document.createElement("button");
-    send.className = "chat-btn";
-    send.textContent = "Send";
+  STATE.inputPane.innerHTML = "";
+  const input = document.createElement("input");
+  input.className = "chat-text";
+  input.placeholder = "Type your question…";
+  const send = document.createElement("button");
+  send.className = "chat-btn";
+  send.textContent = "Send";
 
-    send.onclick = async () => {
-      const qRaw = input.value.trim();
-      const q = normalize(qRaw);
-      if (!q) return;
-      await addMessage(qRaw, "user");
+  send.onclick = async () => {
+    const qRaw = input.value.trim();
+    const q = normalize(qRaw);
+    if (!q) return;
+    await addMessage(qRaw, "user");
 
-      if (["realperson", "speakwithsomeone"].includes(q)) {
-        await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
-        await sendEmailNotification("Live Chat Request", `User requested a real person/live chat. Consignment: ${STATE.consignmentMatch?.CONSIGNMENT || "N/A"}`);
-        STATE.inputPane.innerHTML = "";
-        return;
-      }
+    // Enhanced AI matching for requests to speak with real person
+    const realPersonPhrases = [
+      "realperson", "livechat", "speakwithsomeone", "talktooperator",
+      "humanagent", "customerrepresentative", "realagent", "agentplease",
+      "speaktohuman", "contacthuman", "liveagent"
+    ];
+    const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
 
-      if (["that'sall", "thatsall", "no", "thanks"].includes(q)) {
-        await addMessage("Thank you for contacting Direct Freight Express. Have a great day!", "bot");
-        resetConversation();
-        return;
-      }
+    if (wantsLiveChat) {
+      // Compose email body with matched details
+      const details = STATE.consignmentMatch ? 
+        `Consignment: ${STATE.consignmentMatch.CONSIGNMENT}\n` +
+        `ETA: ${STATE.consignmentMatch.ETA}\n` +
+        `Receiver Name: ${STATE.consignmentMatch["RECEIVER NAME"]}\n` +
+        `Postcode: ${STATE.consignmentMatch.POSTCODE}\n` +
+        `Phone: ${STATE.consignmentMatch["RECEIVER PHONE"]}\n` +
+        `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}`
+        : "No consignment matched.";
 
-      if (q.includes("when") && q.includes("deliver")) {
-        await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}.`, "bot");
-      } else if (q.includes("time")) {
-        if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`The delivery time window is ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
-        } else {
-          await addMessage("Please check back after 8:30am on the ETA date for more accurate delivery times. Thank you.", "bot");
-        }
+      await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
+      await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
+
+      // Show button to connect to team member
+      const connectBtn = document.createElement("button");
+      connectBtn.className = "chat-btn";
+      connectBtn.textContent = "Connect me to a team member";
+      STATE.inputPane.innerHTML = "";
+      STATE.inputPane.appendChild(connectBtn);
+
+      connectBtn.onclick = async () => {
+        await addMessage("Connect me to a team member", "user");
+        await addMessage("A team member will join the chat shortly.", "bot");
+        STATE.inputPane.innerHTML = ""; // Clear input area after
+      };
+
+      return;
+    }
+
+    if (["that'sall", "thatsall", "no", "thanks"].includes(q)) {
+      await addMessage("Thank you for contacting Direct Freight Express. Have a great day!", "bot");
+      resetConversation();
+      return;
+    }
+
+    if (q.includes("when") && q.includes("deliver")) {
+      await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}.`, "bot");
+    } else if (q.includes("time")) {
+      if (isToday(STATE.consignmentMatch.ETA)) {
+        await addMessage(`The delivery time window is ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
       } else {
-        await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
+        await addMessage("Please check back after 8:30am on the ETA date for more accurate delivery times. Thank you.", "bot");
       }
+    } else {
+      await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
+    }
 
-      input.value = "";
-    };
+    input.value = "";
+  };
 
-    input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
-    STATE.inputPane.append(input, send);
-    input.focus();
-  }
+  input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
+  STATE.inputPane.append(input, send);
+  input.focus();
+}
+
 
   async function showStep() {
     if (STATE.stepStarted) return; // prevent double starts
@@ -230,7 +262,7 @@
           const val = input.value.trim();
           input.disabled = true;
           await addMessage(val, "user");
-          await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
+          await addMessage("Sorry, I do not understand. Please try again.", "bot");
           STATE.inputPane.innerHTML = "";
           STATE.idx = 0;
           STATE.stepStarted = false;
