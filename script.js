@@ -158,10 +158,10 @@
 
       // Handle common delivery questions:
       if (q.includes("when") && q.includes("deliver")) {
-        await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}. Thank you for checking.`, "bot");
+        await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}.`, "bot");
       } else if (q.includes("time")) {
         if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`The delivery time window is between ${STATE.consignmentMatch.TIME_WINDOW}. I hope this helps.`, "bot");
+          await addMessage(`The delivery time window is ${STATE.consignmentMatch.TIME_WINDOW} .`, "bot");
         } else {
           await addMessage("Please check back after 8:30am on the ETA date for more accurate delivery times. Thank you.", "bot");
         }
@@ -295,7 +295,7 @@
     window.addEventListener("resize", resizeBody);
 
     addMessage(
-      "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes. How may I assist you today?",
+      "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes.",
       "bot",
       0
     ).then(() => setTimeout(showStep, 800));
