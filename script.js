@@ -12,27 +12,32 @@
     body: null,
     inputPane: null,
     consignmentMatch: null,
+    stepStarted: false,
   };
 
   const normalize = str => (str || "").toLowerCase().replace(/\s+/g, "").trim();
-  const normalizePhone = str => (str || "").replace(/\D/g, "");
   const scrollToBottom = () => { STATE.body.scrollTop = STATE.body.scrollHeight; };
+
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
   const isToday = etaStr => {
     const [d, m, y] = etaStr.split("/").map(Number);
     const eta = new Date(y, m - 1, d);
-    return eta.toDateString() === new Date().toDateString();
+    const today = new Date();
+    return eta.toDateString() === today.toDateString();
   };
 
-  const sendEmailNotification = async (subject, body) => {
+  async function sendEmailNotification(subject, body) {
     console.log(`Sending email to peterno@directfreight.com.au`);
     console.log("Subject:", subject);
     console.log("Body:", body);
-    return new Promise(resolve => setTimeout(resolve, 1000));
-  };
+    // Simulate async email sending
+    await delay(1000);
+  }
 
   function addMessage(text, sender = "bot", baseDelay = 1200, typeSlow = false) {
     return new Promise(resolve => {
-      const delay = baseDelay + Math.random() * 800;
+      const delayTime = baseDelay + Math.random() * 800;
       setTimeout(() => {
         const msg = document.createElement("div");
         msg.className = `msg ${sender}`;
@@ -58,7 +63,7 @@
           bubble.innerHTML = text;
           resolve();
         }
-      }, delay);
+      }, delayTime);
     });
   }
 
@@ -85,36 +90,10 @@
         await addMessage(label, "user");
         if (label === "Yes") {
           STATE.answers = {};
-          STATE.idx = 1;
+          STATE.idx = 1; // go to postcode step
           showStep();
         } else {
           await addMessage("Alright, how else may I assist you today?", "bot");
-          STATE.inputPane.innerHTML = "";
-        }
-      };
-      container.appendChild(btn);
-    });
-    STATE.inputPane.appendChild(container);
-  }
-
-  async function confirmIntent(intent) {
-    STATE.inputPane.innerHTML = "";
-    await addMessage(`Are you asking about ${intent}?`, "bot");
-    const container = document.createElement("div");
-    container.className = "choice-container";
-    ["Yes", "No"].forEach(opt => {
-      const btn = document.createElement("button");
-      btn.className = "chat-btn";
-      btn.textContent = opt;
-      btn.onclick = async () => {
-        container.innerHTML = "";
-        await addMessage(opt, "user");
-        if (opt === "Yes") {
-          STATE.answers.topic = intent;
-          STATE.idx++;
-          showStep();
-        } else {
-          await addMessage("Okay, please tell me how I may assist you then.", "bot");
           STATE.inputPane.innerHTML = "";
         }
       };
@@ -159,7 +138,7 @@
         await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}.`, "bot");
       } else if (q.includes("time")) {
         if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`The delivery time window is ${STATE.consignmentMatch.TIME_WINDOW} .`, "bot");
+          await addMessage(`The delivery time window is ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
         } else {
           await addMessage("Please check back after 8:30am on the ETA date for more accurate delivery times. Thank you.", "bot");
         }
@@ -176,25 +155,41 @@
   }
 
   async function showStep() {
+    if (STATE.stepStarted) return; // prevent double starts
+    STATE.stepStarted = true;
+
     const STEPS = [
-      { id: "topic", text: "How may I assist you today?", type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
+      {
+        id: "topic",
+        text: "How may I assist you today? You can choose Track Consignment, Pickups, or type your question.",
+        type: "smartChoice",
+        choices: ["Track Consignment", "Pickups", "Other (Type your question)"]
+      },
       { id: "postcode", text: "Please enter the postcode that the delivery is going to:", type: "input", dependsOn: "Track Consignment" },
       { id: "consign", text: "Please enter the Consignment Number:", type: "input", dependsOn: "Track Consignment" },
-      { id: "phone", text: "", type: "input", dependsOn: "Track Consignment" },
+      { id: "phone", text: "For security purposes, please enter your phone number.", type: "input", dependsOn: "Track Consignment" },
       { id: "surname", text: "Please enter your Surname:", type: "input", dependsOn: "Track Consignment" },
     ];
-    if (STATE.idx >= STEPS.length) return finalizeFlow();
+
+    if (STATE.idx >= STEPS.length) {
+      STATE.stepStarted = false;
+      return finalizeFlow();
+    }
+
     const step = STEPS[STATE.idx];
     if (step.dependsOn && STATE.answers.topic !== step.dependsOn) {
       STATE.idx++;
+      STATE.stepStarted = false;
       return showStep();
     }
 
     STATE.inputPane.innerHTML = "";
-    if (step.text) await addMessage(step.text, "bot", 0);
+    if (step.text) await addMessage(step.text, "bot", 800);
+
     if (step.type === "smartChoice") {
       const cdiv = document.createElement("div");
       cdiv.className = "choice-container";
+
       step.choices.forEach(ch => {
         const btn = document.createElement("button");
         btn.className = "chat-btn";
@@ -202,21 +197,65 @@
         btn.onclick = async () => {
           Array.from(cdiv.children).forEach(b => b.disabled = true);
           await addMessage(ch, "user");
-          STATE.answers.topic = ch;
           cdiv.remove();
+
+          // Handle Pickups immediately with feature coming soon
+          if (ch === "Pickups") {
+            await addMessage("Feature coming soon.", "bot");
+            STATE.inputPane.innerHTML = "";
+            STATE.idx = 0; // Restart conversation or you can choose to end here
+            STATE.stepStarted = false;
+            return showStep();
+          }
+
+          if (ch === "Other (Type your question)") {
+            await addMessage("Please type your question below.", "bot");
+            STATE.answers.topic = "Other";
+            STATE.inputPane.innerHTML = "";
+
+            const input = document.createElement("input");
+            input.className = "chat-text";
+            input.placeholder = "Type your question here…";
+
+            input.addEventListener("keypress", async e => {
+              if (e.key === "Enter" && input.value.trim()) {
+                input.disabled = true;
+                const val = input.value.trim();
+                await addMessage(val, "user");
+                // For now just respond politely and reset
+                await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
+                STATE.inputPane.innerHTML = "";
+                STATE.idx = 0;
+                STATE.stepStarted = false;
+                resetConversation();
+              }
+            });
+
+            STATE.inputPane.appendChild(input);
+            input.focus();
+            STATE.stepStarted = false;
+            return;
+          }
+
+          // Normal Track Consignment path
+          STATE.answers.topic = ch;
           STATE.idx++;
+          STATE.stepStarted = false;
           showStep();
         };
         cdiv.appendChild(btn);
       });
-      STATE.inputPane.innerHTML = "";
-      STATE.body.appendChild(cdiv);
+
+      STATE.inputPane.appendChild(cdiv);
+      STATE.stepStarted = false;
       return;
     }
 
+    // Input type steps
     const input = document.createElement("input");
     input.className = "chat-text";
     input.placeholder = "Enter here…";
+
     input.addEventListener("keypress", async e => {
       if (e.key === "Enter" && input.value.trim()) {
         input.disabled = true;
@@ -228,6 +267,7 @@
           em.textContent = "Postcode must be 4 digits. Please try again.";
           STATE.inputPane.appendChild(em);
           input.disabled = false;
+          STATE.stepStarted = false;
           return;
         }
 
@@ -238,22 +278,25 @@
             em.textContent = "Consignment number must be 13 digits. Please try again.";
             STATE.inputPane.appendChild(em);
             input.disabled = false;
+            STATE.stepStarted = false;
             return;
           }
           const match = DELIVERY_DATA.find(r =>
             normalize(r.POSTCODE) === normalize(STATE.answers.postcode) &&
             normalize(r.CONSIGNMENT) === normalize(val)
           );
-          if (!match) return askTryAgain();
+          if (!match) {
+            STATE.stepStarted = false;
+            return askTryAgain();
+          }
           STATE.consignmentMatch = match;
           await addMessage(val, "user");
           await addMessage("Thank you. Your details have been matched in our system.", "bot");
-          await addMessage("For security purposes, please enter your phone number.", "bot");
           STATE.answers.consign = val;
-          STATE.idx = 3;
+          STATE.idx = 3; // jump to phone input step
           STATE.inputPane.innerHTML = "";
-          showStep();
-          return;
+          STATE.stepStarted = false;
+          return showStep();
         }
 
         if (step.id === "phone" && !/^0[23478]\d{8}$/.test(val)) {
@@ -262,15 +305,18 @@
           em.textContent = "Phone must be 10 digits, starting with 02, 03, 04, 07, or 08. Please try again.";
           STATE.inputPane.appendChild(em);
           input.disabled = false;
+          STATE.stepStarted = false;
           return;
         }
 
         STATE.answers[step.id] = val;
         await addMessage(val, "user");
         STATE.idx++;
+        STATE.stepStarted = false;
         showStep();
       }
     });
+
     STATE.inputPane.appendChild(input);
     input.focus();
   }
@@ -290,13 +336,14 @@
     resizeBody();
     window.addEventListener("resize", resizeBody);
 
+    // Initial welcome typed slowly
     addMessage(
-      "Welcome to Direct Freight Express — this chat is monitored for accuracy and reporting purposes.",
+      "Welcome to Direct Freight Express! This chat is monitored for accuracy and reporting purposes.",
       "bot",
       0,
       true // typed slowly
     )
-    .then(() => new Promise(resolve => setTimeout(resolve, 1000)))
-    .then(() => setTimeout(showStep, 800));
+      .then(() => delay(1000))
+      .then(() => showStep());
   });
 })();
