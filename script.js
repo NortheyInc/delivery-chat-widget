@@ -24,11 +24,15 @@
     return eta.toDateString() === new Date().toDateString();
   };
 
-  const matchIntent = text => {
-    const input = normalize(text);
-    if (/track|delivery|where|when|order|carton|consignment/.test(input)) return "Track Consignment";
-    if (/pickup|collect/.test(input)) return "Pickups";
-    return null;
+  // Correct sendEmailNotification function with your email inside
+  const sendEmailNotification = async (subject, body) => {
+    // Your actual email logic here.
+    // For example, you might send to your backend server or an email API.
+    // For now, simulate with console log and delay:
+    console.log(`Sending email to peterno@directfreight.com.au`);
+    console.log("Subject:", subject);
+    console.log("Body:", body);
+    return new Promise(resolve => setTimeout(resolve, 1000));
   };
 
   function addMessage(text, sender = "bot", baseDelay = 1200) {
@@ -61,7 +65,7 @@
   async function askTryAgain() {
     STATE.inputPane.innerHTML = "";
     await addMessage(
-      `Details entered do not match. Please try again or for Tracking of a consignment, please go to <a href="https://www.directfreight.com.au/ConsignmentStatus.aspx" target="_blank">https://www.directfreight.com.au/ConsignmentStatus.aspx</a>`,
+      `I'm sorry, but the details you entered do not match our records. Please try again or for tracking a consignment, please visit <a href="https://www.directfreight.com.au/ConsignmentStatus.aspx" target="_blank" rel="noopener">Direct Freight Consignment Status</a>. Thank you for your understanding.`,
       "bot"
     );
     await addMessage("Would you like to try again?", "bot");
@@ -79,7 +83,7 @@
           STATE.idx = 1;
           showStep();
         } else {
-          await addMessage("Alright, how else can I help you?", "bot");
+          await addMessage("Alright, how else may I assist you today?", "bot");
           STATE.inputPane.innerHTML = "";
         }
       };
@@ -90,7 +94,7 @@
 
   async function confirmIntent(intent) {
     STATE.inputPane.innerHTML = "";
-    await addMessage(`Are you after ${intent}?`, "bot");
+    await addMessage(`Are you asking about ${intent}?`, "bot");
     const container = document.createElement("div");
     container.className = "choice-container";
     ["Yes", "No"].forEach(opt => {
@@ -105,7 +109,7 @@
           STATE.idx++;
           showStep();
         } else {
-          await addMessage("Okay, what can I help you with then?", "bot");
+          await addMessage("Okay, please tell me how I may assist you then.", "bot");
           STATE.inputPane.innerHTML = "";
         }
       };
@@ -128,23 +132,46 @@
     const send = document.createElement("button");
     send.className = "chat-btn";
     send.textContent = "Send";
+
     send.onclick = async () => {
-      const q = input.value.trim().toLowerCase();
+      const qRaw = input.value.trim();
+      const q = normalize(qRaw);
       if (!q) return;
-      await addMessage(input.value.trim(), "user");
+      await addMessage(qRaw, "user");
+
+      // Check special commands with manners:
+      if (["realperson", "speakwithsomeone"].includes(q)) {
+        await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
+        await sendEmailNotification(
+          "Live Chat Request",
+          `User requested a real person/live chat. Consignment: ${STATE.consignmentMatch?.CONSIGNMENT || "N/A"}`
+        );
+        STATE.inputPane.innerHTML = "";
+        return;
+      }
+
+      if (["that'sall", "thatsall", "no", "thanks"].includes(q)) {
+        await addMessage("Thank you for contacting Direct Freight Express. Have a great day!", "bot");
+        resetConversation();
+        return;
+      }
+
+      // Handle common delivery questions:
       if (q.includes("when") && q.includes("deliver")) {
-        await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
+        await addMessage(`Your estimated delivery date is ${STATE.consignmentMatch.ETA}. Thank you for checking.`, "bot");
       } else if (q.includes("time")) {
         if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
+          await addMessage(`The delivery time window is between ${STATE.consignmentMatch.TIME_WINDOW}. I hope this helps.`, "bot");
         } else {
-          await addMessage("Please check back after 8:30am on the ETA date.", "bot");
+          await addMessage("Please check back after 8:30am on the ETA date for more accurate delivery times. Thank you.", "bot");
         }
       } else {
-        await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
+        await addMessage("Thank you for your question. A customer service representative will get back to you shortly.", "bot");
       }
+
       input.value = "";
     };
+
     input.addEventListener("keypress", e => { if (e.key === "Enter") send.click(); });
 
     STATE.inputPane.append(input, send);
@@ -202,7 +229,7 @@
         if (step.id === "postcode" && !/^\d{4}$/.test(val)) {
           const em = document.createElement("div");
           em.className = "error";
-          em.textContent = "Postcode must be 4 digits.";
+          em.textContent = "Postcode must be 4 digits. Please try again.";
           STATE.inputPane.appendChild(em);
           input.disabled = false;
           return;
@@ -212,7 +239,7 @@
           if (!/^\d{13}$/.test(val)) {
             const em = document.createElement("div");
             em.className = "error";
-            em.textContent = "Consignment number must be 13 digits.";
+            em.textContent = "Consignment number must be 13 digits. Please try again.";
             STATE.inputPane.appendChild(em);
             input.disabled = false;
             return;
@@ -224,7 +251,7 @@
           if (!match) return askTryAgain();
           STATE.consignmentMatch = match;
           await addMessage(val, "user");
-          await addMessage("Details have been matched in our system.", "bot");
+          await addMessage("Thank you. Your details have been matched in our system.", "bot");
           await addMessage("For security purposes, please enter your phone number.", "bot");
           STATE.answers.consign = val;
           STATE.idx = 3;
@@ -236,7 +263,7 @@
         if (step.id === "phone" && !/^0[23478]\d{8}$/.test(val)) {
           const em = document.createElement("div");
           em.className = "error";
-          em.textContent = "Phone must be 10 digits, start 02/03/04/07/08.";
+          em.textContent = "Phone must be 10 digits, starting with 02, 03, 04, 07, or 08. Please try again.";
           STATE.inputPane.appendChild(em);
           input.disabled = false;
           return;
@@ -255,6 +282,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     STATE.body = document.getElementById("chat-body");
     STATE.inputPane = document.getElementById("chat-input");
+
     function resizeBody() {
       const widget = document.getElementById("chat-widget");
       const header = document.getElementById("chat-header");
@@ -262,10 +290,12 @@
       STATE.body.style.height = (widget.clientHeight - header.offsetHeight - input.offsetHeight) + "px";
       STATE.body.style.overflowY = "auto";
     }
+
     resizeBody();
     window.addEventListener("resize", resizeBody);
+
     addMessage(
-      "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes.",
+      "Welcome to Direct Freight Express. This chat is monitored for accuracy and reporting purposes. How may I assist you today?",
       "bot",
       0
     ).then(() => setTimeout(showStep, 800));
