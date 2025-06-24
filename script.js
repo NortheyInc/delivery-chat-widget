@@ -27,13 +27,25 @@
     return eta.toDateString() === today.toDateString();
   };
 
-  async function sendEmailNotification(subject, body) {
-    console.log(`Sending email to peterno@directfreight.com.au`);
-    console.log("Subject:", subject);
-    console.log("Body:", body);
-    // Simulate async email sending
-    await delay(1000);
+async function sendEmailNotification(subject, body) {
+  try {
+    await fetch("https://your-backend-api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        to: "peterno@directfreight.com.au",
+        subject,
+        message: body
+      })
+    });
+    console.log("Email sent.");
+  } catch (error) {
+    console.error("Failed to send email:", error);
   }
+}
+
 
   function addMessage(text, sender = "bot", baseDelay = 1200, typeSlow = false) {
     return new Promise(resolve => {
@@ -139,7 +151,7 @@ async function finalizeFlow() {
         `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}`
         : "No consignment matched.";
 
-      await addMessage("Certainly, I will notify a live customer service representative to assist you shortly. Thank you for your patience.", "bot");
+      await addMessage("No problem. Please click the button below to be connected.", "bot");
       await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
 
       const connectBtn = document.createElement("button");
