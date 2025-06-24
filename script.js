@@ -27,13 +27,24 @@
     return eta.toDateString() === today.toDateString();
   };
 
-  async function sendEmailNotification(subject, body) {
-    console.log(`Sending email to peterno@directfreight.com.au`);
-    console.log("Subject:", subject);
-    console.log("Body:", body);
-    // Simulate async email sending
-    await delay(1000);
-  }
+async function sendEmailNotification(details) {
+  const formData = new FormData();
+  formData.append('_subject', 'Live Chat Request');
+  formData.append('Consignment', details.CONSIGNMENT);
+  formData.append('ETA', details.ETA);
+  formData.append('Receiver Name', details['RECEIVER NAME']);
+  formData.append('Postcode', details.POSTCODE);
+  formData.append('Phone', details['RECEIVER PHONE']);
+  formData.append('Time Window', details.TIME_WINDOW);
+  // disable captcha on Formsubmit side (optional)
+  formData.append('_captcha', 'false');
+
+  await fetch('https://formsubmit.co/peterno@directfreight.com.au', {
+    method: 'POST',
+    body: formData
+  });
+}
+
 
   function addMessage(text, sender = "bot", baseDelay = 1200, typeSlow = false) {
     return new Promise(resolve => {
