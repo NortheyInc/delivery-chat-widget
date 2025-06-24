@@ -10,8 +10,8 @@
     { id: "topic",    text: "Hello! How may I assist you today?",                                type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
     { id: "postcode", text: "Please enter the postcode that the delivery is going to:",          type: "input",       dependsOn: "Track Consignment" },
     { id: "consign",  text: "Please enter the Consignment Number:",                             type: "input",       dependsOn: "Track Consignment" },
-    { id: "phone",    text: "",  /* blank so no repeat */                                       type: "input",       dependsOn: "Track Consignment" },
-    { id: "surname",  text: "Please enter your Surname:",                                      type: "input",       dependsOn: "Track Consignment" },
+    { id: "phone",    text: "",                                                                   type: "input",       dependsOn: "Track Consignment" },
+    { id: "surname",  text: "Please enter your Surname:",                                       type: "input",       dependsOn: "Track Consignment" },
   ];
 
   const STATE = {
@@ -22,10 +22,10 @@
     consignmentMatch: null,
   };
 
-  const normalize     = s => (s||"").toLowerCase().replace(/\s+/g,"").trim();
-  const normalizePhone= s => (s||"").replace(/\D/g,"");
-  const scrollToBottom= () => { STATE.body.scrollTop = STATE.body.scrollHeight; };
-  const isToday       = etaStr => {
+  const normalize      = s => (s||"").toLowerCase().replace(/\s+/g,"").trim();
+  const normalizePhone = s => (s||"").replace(/\D/g,"");
+  const scrollToBottom = () => { STATE.body.scrollTop = STATE.body.scrollHeight; };
+  const isToday        = etaStr => {
     const [d,m,y] = etaStr.split("/").map(Number);
     const eta = new Date(y, m-1, d);
     return eta.toDateString() === new Date().toDateString();
@@ -61,7 +61,9 @@
   async function askTryAgain() {
     STATE.inputPane.innerHTML = "";
     await addMessage(
-      "Consignment number not found. Please try again, or for Tracking of a consignment, please go to https://www.directfreight.com.au/ConsignmentStatus.aspx",
+      "Details entered do not match. Please try again or for Tracking of a consignment, please go to " +
+      "<a href=\"https://www.directfreight.com.au/ConsignmentStatus.aspx\" target=\"_blank\">" +
+      "https://www.directfreight.com.au/ConsignmentStatus.aspx</a>",
       "bot"
     );
     await addMessage("Would you like to try again?", "bot");
@@ -90,7 +92,7 @@
 
   async function confirmIntent(intent) {
     STATE.inputPane.innerHTML = "";
-    await addMessage(`Please confirm: ${intent}?`, "bot");
+    await addMessage(`Are you after ${intent}?`, "bot");
     const container = document.createElement("div");
     container.className = "choice-container";
     ["Yes","No"].forEach(opt => {
@@ -102,22 +104,11 @@
         await addMessage(opt, "user");
         if (opt==="Yes") {
           STATE.answers.topic = intent;
-          if (intent==="Pickups") {
-            await addMessage("This feature coming soon.", "bot");
-            STATE.inputPane.innerHTML = "";
-            const restart = document.createElement("button");
-            restart.className = "chat-btn";
-            restart.textContent = "Start Again";
-            restart.onclick = () => resetConversation();
-            STATE.inputPane.appendChild(restart);
-          } else {
-            STATE.idx++;
-            showStep();
-          }
-        } else {
-          await addMessage("Alright, please choose again or rephrase.", "bot");
-          STATE.idx = 0;
+          STATE.idx++;
           showStep();
+        } else {
+          await addMessage("Okay, what can I help you with then?", "bot");
+          STATE.inputPane.innerHTML = "";
         }
       };
       container.appendChild(btn);
@@ -148,7 +139,6 @@
       const q = input.value.trim().toLowerCase();
       if (!q) return;
       await addMessage(input.value.trim(), "user");
-
       if (q.includes("when") && q.includes("deliver")) {
         await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
       } else if (q.includes("time")) {
@@ -159,7 +149,6 @@
       } else {
         await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
       }
-
       input.value = "";
     };
     input.addEventListener("keypress", e => { if (e.key==="Enter") send.click(); });
@@ -188,35 +177,54 @@
         btn.onclick = async () => {
           Array.from(cdiv.children).forEach(b => b.disabled = true);
           await addMessage(ch, "user");
-          if (ch === "Pickups") {
-            await addMessage("This feature coming soon.", "bot");
-            STATE.inputPane.innerHTML = "";
-            const restart = document.createElement("button");
-            restart.className = "chat-btn";
-            restart.textContent = "Start Again";
-            restart.onclick = () => resetConversation();
-            STATE.inputPane.appendChild(restart);
-          } else {
-            STATE.answers.topic = ch;
-            STATE.idx++;
-            showStep();
-          }
+          STATE.answers.topic = ch;
+          STATE.idx++;
+          showStep();
         };
         cdiv.appendChild(btn);
       });
-      STATE.inputPane.append(cdiv);
+
+      const wrap = document.createElement("div");
+      wrap.className = "wrap";
+      const txt = document.createElement("input");
+      txt.className = "chat-text";
+      txt.placeholder = "Or ask…";
+      const sendBtn = document.createElement("button");
+      sendBtn.className = "chat-btn";
+      sendBtn.textContent = "Send";
+
+      sendBtn.onclick = async () => {
+        const u = txt.value.trim();
+        if (!u) return;
+        Array.from(cdiv.children).forEach(b => b.disabled = true);
+        txt.disabled = true;
+        await addMessage(u, "user");
+        const intent = normalize(u).includes("track") ? "Track Consignment"
+                     : normalize(u).includes("pickup") ? "Pickups"
+                     : null;
+        if (intent) await confirmIntent(intent);
+        else await addMessage("Sorry, I didn’t understand. Can you rephrase?", "bot");
+      };
+
+      txt.addEventListener("keypress", e => {
+        if (e.key === "Enter") sendBtn.click();
+      });
+
+      wrap.append(txt, sendBtn);
+      STATE.inputPane.append(cdiv, wrap);
+      txt.focus();
       return;
     }
 
-    // INPUT steps:
-    if (step.id === "postcode") {
-      const input = document.createElement("input");
-      input.className = "chat-text";
-      input.placeholder = "Enter here…";
-      input.addEventListener("keypress", async e => {
-        if (e.key==="Enter" && input.value.trim()) {
-          input.disabled = true;
-          const val = input.value.trim();
+    // input steps
+    const input = document.createElement("input");
+    input.className = "chat-text";
+    input.placeholder = "Enter here…";
+    input.addEventListener("keypress", async e => {
+      if (e.key==="Enter" && input.value.trim()) {
+        input.disabled = true;
+        const val = input.value.trim();
+        if (step.id==="postcode") {
           if (!/^\d{4}$/.test(val)) {
             const em = document.createElement("div");
             em.className = "error";
@@ -226,24 +234,8 @@
             return;
           }
           STATE.answers.postcode = val;
-          await addMessage(val, "user");
-          STATE.idx++;
-          showStep();
         }
-      });
-      STATE.inputPane.appendChild(input);
-      input.focus();
-      return;
-    }
-
-    if (step.id === "consign") {
-      const input = document.createElement("input");
-      input.className = "chat-text";
-      input.placeholder = "Enter here…";
-      input.addEventListener("keypress", async e => {
-        if (e.key==="Enter" && input.value.trim()) {
-          input.disabled = true;
-          const val = input.value.trim();
+        if (step.id==="consign") {
           if (!/^\d{13}$/.test(val)) {
             const em = document.createElement("div");
             em.className = "error";
@@ -257,7 +249,6 @@
             normalize(r.CONSIGNMENT) === normalize(val)
           );
           if (!match) return askTryAgain();
-
           STATE.consignmentMatch = match;
           await addMessage(val, "user");
           await addMessage("Details have been matched in our system.", "bot");
@@ -266,21 +257,9 @@
           STATE.idx = STEPS.findIndex(s => s.id==="phone");
           STATE.inputPane.innerHTML = "";
           showStep();
+          return;
         }
-      });
-      STATE.inputPane.appendChild(input);
-      input.focus();
-      return;
-    }
-
-    if (step.id === "phone") {
-      const input = document.createElement("input");
-      input.className = "chat-text";
-      input.placeholder = "Enter here…";
-      input.addEventListener("keypress", async e => {
-        if (e.key==="Enter" && input.value.trim()) {
-          input.disabled = true;
-          const val = input.value.trim();
+        if (step.id==="phone") {
           if (!/^0[23478]\d{8}$/.test(val)) {
             const em = document.createElement("div");
             em.className = "error";
@@ -290,33 +269,17 @@
             return;
           }
           STATE.answers.phone = val;
-          await addMessage(val, "user");
-          STATE.idx++;
-          showStep();
         }
-      });
-      STATE.inputPane.appendChild(input);
-      input.focus();
-      return;
-    }
-
-    if (step.id === "surname") {
-      const input = document.createElement("input");
-      input.className = "chat-text";
-      input.placeholder = "Enter here…";
-      input.addEventListener("keypress", async e => {
-        if (e.key==="Enter" && input.value.trim()) {
-          input.disabled = true;
-          STATE.answers.surname = input.value.trim();
-          await addMessage(input.value.trim(), "user");
-          STATE.idx++;
-          showStep();
+        if (step.id==="surname") {
+          STATE.answers.surname = val;
         }
-      });
-      STATE.inputPane.appendChild(input);
-      input.focus();
-      return;
-    }
+        await addMessage(val, "user");
+        STATE.idx++;
+        showStep();
+      }
+    });
+    STATE.inputPane.appendChild(input);
+    input.focus();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
