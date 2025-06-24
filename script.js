@@ -7,11 +7,11 @@
   ];
 
   const STEPS = [
-    { id: "topic",   text: "Hello! How may I assist you today?",                    type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
-    { id: "postcode",text: "Please enter the postcode that the delivery is going to:", type: "input",       dependsOn: "Track Consignment" },
-    { id: "consign", text: "Please enter the Consignment Number:",                 type: "input",       dependsOn: "Track Consignment" },
-    { id: "phone",   text: "Please enter your Phone Number:",                     type: "input",       dependsOn: "Track Consignment" },
-    { id: "surname", text: "Please enter your Surname:",                          type: "input",       dependsOn: "Track Consignment" },
+    { id: "topic",    text: "Hello! How may I assist you today?",                                type: "smartChoice", choices: ["Track Consignment", "Pickups"] },
+    { id: "postcode", text: "Please enter the postcode that the delivery is going to:",          type: "input",       dependsOn: "Track Consignment" },
+    { id: "consign",  text: "Please enter the Consignment Number:",                             type: "input",       dependsOn: "Track Consignment" },
+    { id: "phone",    text: "",  /* blank so no repeat */                                       type: "input",       dependsOn: "Track Consignment" },
+    { id: "surname",  text: "Please enter your Surname:",                                      type: "input",       dependsOn: "Track Consignment" },
   ];
 
   const STATE = {
@@ -76,7 +76,7 @@
         await addMessage(label, "user");
         if (label==="Yes") {
           STATE.answers = {};
-          STATE.idx = 1;  // go to postcode
+          STATE.idx = 1;
           showStep();
         } else {
           await addMessage("Alright, how else can I help you?", "bot");
@@ -126,7 +126,6 @@
   }
 
   async function finalizeFlow() {
-    // At this point, STATE.consignmentMatch is already set
     await addMessage("Thank you. We have matched your information.", "bot");
     await addMessage("How may I assist you?", "bot");
 
@@ -149,17 +148,18 @@
       const q = input.value.trim().toLowerCase();
       if (!q) return;
       await addMessage(input.value.trim(), "user");
-      if (/when/.test(q) && /deliver/.test(q)) {
+
+      if (q.includes("when") && q.includes("deliver")) {
         await addMessage(`Your ETA is ${STATE.consignmentMatch.ETA}.`, "bot");
-      } else if (/time/.test(q) && /deliver/.test(q)) {
-        if (isToday(STATE.consignmentMatch.ETA)) {
-          await addMessage(`Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`, "bot");
-        } else {
-          await addMessage("Please check back after 8:30am on the ETA date.", "bot");
-        }
+      } else if (q.includes("time")) {
+        await addMessage(
+          `Delivery time will be between ${STATE.consignmentMatch.TIME_WINDOW}.`,
+          "bot"
+        );
       } else {
         await addMessage("Thanks for your question! We'll get back to you shortly.", "bot");
       }
+
       input.value = "";
     };
     input.addEventListener("keypress", e => { if (e.key==="Enter") send.click(); });
@@ -176,7 +176,7 @@
       return showStep();
     }
     STATE.inputPane.innerHTML = "";
-    await addMessage(step.text, "bot", 0);
+    if (step.text) await addMessage(step.text, "bot", 0);
 
     if (step.type === "smartChoice") {
       const cdiv = document.createElement("div");
@@ -252,7 +252,6 @@
             input.disabled = false;
             return;
           }
-          // check postcode + consign match
           const match = DELIVERY_DATA.find(r =>
             normalize(r.POSTCODE) === normalize(STATE.answers.postcode) &&
             normalize(r.CONSIGNMENT) === normalize(val)
