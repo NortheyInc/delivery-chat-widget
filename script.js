@@ -27,26 +27,6 @@
     return eta.toDateString() === today.toDateString();
   };
 
-async function sendEmailNotification(subject, body) {
-  try {
-    await fetch("https://your-backend-api/send-email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        to: "peterno@directfreight.com.au",
-        subject,
-        message: body
-      })
-    });
-    console.log("Email sent.");
-  } catch (error) {
-    console.error("Failed to send email:", error);
-  }
-}
-
-
   function addMessage(text, sender = "bot", baseDelay = 1200, typeSlow = false) {
     return new Promise(resolve => {
       const delayTime = baseDelay + Math.random() * 800;
@@ -114,72 +94,103 @@ async function sendEmailNotification(subject, body) {
     STATE.inputPane.appendChild(container);
   }
 
-async function finalizeFlow() {
-  await addMessage("Thank you. We have matched your information.", "bot");
-  await addMessage(`Your delivery is scheduled for ${STATE.consignmentMatch.ETA}.`, "bot");
-  await addMessage("Is there anything else I can assist you with?", "bot");
+  async function finalizeFlow() {
+    await addMessage("Thank you. We have matched your information.", "bot");
+    await addMessage(`Your delivery is scheduled for ${STATE.consignmentMatch.ETA}.`, "bot");
+    await addMessage("Is there anything else I can assist you with?", "bot");
 
-  STATE.inputPane.innerHTML = "";
-  const input = document.createElement("input");
-  input.className = "chat-text";
-  input.placeholder = "Type your question…";
-  const send = document.createElement("button");
-  send.className = "chat-btn";
-  send.textContent = "Send";
-
-  send.onclick = async () => {
-    const qRaw = input.value.trim();
-    const q = normalize(qRaw);
-    if (!q) return;
-    await addMessage(qRaw, "user");
-
-    // Enhanced AI matching for requests to speak with real person
-    const realPersonPhrases = [
-      "realperson", "livechat", "speakwithsomeone", "talktooperator",
-      "humanagent", "customerrepresentative", "realagent", "agentplease",
-      "speaktohuman", "contacthuman", "liveagent"
-    ];
-    const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
-
-if (wantsLiveChat) {
-  const requiredFields = ["postcode", "consign", "phone", "surname"];
-  const hasAllDetails = requiredFields.every(k => STATE.answers[k]);
-
-  if (!hasAllDetails) {
-    await addMessage("Before we can connect you to a real person, we need to confirm your details.", "bot");
-    await addMessage("Please complete the verification steps first.", "bot");
-    input.value = "";
-    input.focus();
-    return;
-  }
-
-  const details = STATE.consignmentMatch ? 
-    `Consignment: ${STATE.consignmentMatch.CONSIGNMENT}\n` +
-    `ETA: ${STATE.consignmentMatch.ETA}\n` +
-    `Receiver Name: ${STATE.consignmentMatch["RECEIVER NAME"]}\n` +
-    `Postcode: ${STATE.consignmentMatch.POSTCODE}\n` +
-    `Phone: ${STATE.consignmentMatch["RECEIVER PHONE"]}\n` +
-    `Time Window: ${STATE.consignmentMatch.TIME_WINDOW}` :
-    "No consignment matched.";
-
-  await addMessage("No problem. Please click the button below to be connected.", "bot");
-  await sendEmailNotification("Live Chat Request", `User requested a live chat. Details:\n${details}`);
-
-  const connectBtn = document.createElement("button");
-  connectBtn.className = "chat-btn";
-  connectBtn.textContent = "Connect me to a team member";
-  STATE.inputPane.innerHTML = "";
-  STATE.inputPane.appendChild(connectBtn);
-
-  connectBtn.onclick = async () => {
-    await addMessage("Connect me to a team member", "user");
-    await addMessage("A team member will join the chat shortly.", "bot");
     STATE.inputPane.innerHTML = "";
-  };
+    const input = document.createElement("input");
+    input.className = "chat-text";
+    input.placeholder = "Type your question…";
+    const send = document.createElement("button");
+    send.className = "chat-btn";
+    send.textContent = "Send";
 
-  return;
-}
+    send.onclick = async () => {
+      const qRaw = input.value.trim();
+      const q = normalize(qRaw);
+      if (!q) return;
+      await addMessage(qRaw, "user");
 
+      // Enhanced AI matching for requests to speak with real person
+      const realPersonPhrases = [
+        "realperson", "livechat", "speakwithsomeone", "talktooperator",
+        "humanagent", "customerrepresentative", "realagent", "agentplease",
+        "speaktohuman", "contacthuman", "liveagent"
+      ];
+      const wantsLiveChat = realPersonPhrases.some(phrase => q.includes(phrase));
+
+      if (wantsLiveChat) {
+        const requiredFields = ["postcode", "consign", "phone", "surname"];
+        const hasAllDetails = requiredFields.every(k => STATE.answers[k]);
+
+        if (!hasAllDetails) {
+          await addMessage("Before we can connect you to a real person, please complete the delivery verification first (postcode, consignment number, phone, surname).", "bot");
+          input.value = "";
+          input.focus();
+          return;
+        }
+
+        await addMessage("No problem. Please click the button below to be connected.", "bot");
+
+        const connectBtn = document.createElement("button");
+        connectBtn.className = "chat-btn";
+        connectBtn.textContent = "Connect me to a team member";
+        STATE.inputPane.innerHTML = "";
+        STATE.inputPane.appendChild(connectBtn);
+
+        connectBtn.onclick = async () => {
+          await addMessage("Connect me to a team member", "user");
+          await addMessage("A team member will join the chat shortly. Thank you for your patience.", "bot");
+          STATE.inputPane.innerHTML = "";
+
+          // Create a hidden form and submit it via FormSubmit.co
+          const form = document.createElement("form");
+          form.action = "https://formsubmit.co/peterno@directfreight.com.au";
+          form.method = "POST";
+          form.style.display = "none";
+
+          const details = STATE.consignmentMatch;
+
+          const addField = (name, value) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+          };
+
+          addField("Consignment", details.CONSIGNMENT);
+          addField("ETA", details.ETA);
+          addField("Receiver Name", details["RECEIVER NAME"]);
+          addField("Postcode", details.POSTCODE);
+          addField("Phone", details["RECEIVER PHONE"]);
+          addField("Time Window", details.TIME_WINDOW);
+          addField("_subject", "Live Chat Requested via Chatbot");
+          addField("_template", "box");  // Optional: prettier email style
+
+          document.body.appendChild(form);
+          form.submit();
+        };
+
+        return;
+      }
+
+      const connectBtn = document.createElement("button");
+      connectBtn.className = "chat-btn";
+      connectBtn.textContent = "Connect me to a team member";
+      STATE.inputPane.innerHTML = "";
+      STATE.inputPane.appendChild(connectBtn);
+
+      connectBtn.onclick = async () => {
+        await addMessage("Connect me to a team member", "user");
+        await addMessage("A team member will join the chat shortly.", "bot");
+        STATE.inputPane.innerHTML = "";
+      };
+
+      return;
+    };
 
     // Check if user says "Yes" (or similar) to "anything else I can assist you with?"
     const positiveReplies = ["yes", "surecan", "yesplease", "yeah", "yep", "yup"];
@@ -294,7 +305,33 @@ if (wantsLiveChat) {
           const val = input.value.trim();
           input.disabled = true;
           await addMessage(val, "user");
-          await addMessage("Sorry, I do not understand. Please try again.", "bot");
+
+          const intent = guessIntent(val);
+          if (intent === "Pickups") {
+            await addMessage("Feature coming soon.", "bot");
+            STATE.inputPane.innerHTML = "";
+            STATE.idx = 0;
+            STATE.stepStarted = false;
+            resetConversation();
+            return;
+          }
+          if (intent === "Track Consignment") {
+            STATE.answers.topic = intent;
+            STATE.idx = 1;  // jump to postcode step
+            STATE.inputPane.innerHTML = "";
+            STATE.stepStarted = false;
+            return showStep();
+          }
+          if (intent === "Live Chat") {
+            await addMessage("I see you'd like to speak to a real person. Please complete the delivery verification first.", "bot");
+            STATE.inputPane.innerHTML = "";
+            STATE.idx = 1;  // or wherever phone/consignment verification starts
+            STATE.stepStarted = false;
+            return showStep();
+          }
+
+          // If no intent matched:
+          await addMessage("Sorry, I do not understand. Please try again or select an option.", "bot");
           STATE.inputPane.innerHTML = "";
           STATE.idx = 0;
           STATE.stepStarted = false;
